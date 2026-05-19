@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ── Perfil de desarrollo: consola con colores ── -->
+    <springProfile name="dev">
+        <appender name="CONSOLA" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{30}) - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLA"/>
+        </root>
+        <!-- DEBUG para el propio código de Aureus en dev -->
+        <logger name="com.aureus" level="DEBUG"/>
+        <!-- INFO para Hibernate SQL en dev (evita ruido excesivo) -->
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.springframework.security" level="INFO"/>
+    </springProfile>
+
+    <!-- ── Perfil de producción: consola + archivo rotativo ── -->
+    <springProfile name="prod">
+        <appender name="CONSOLA" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <appender name="ARCHIVO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/aureus.log</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+                <!-- Rotación diaria, máximo 30 días de historial (U11 §6.4) -->
+                <fileNamePattern>logs/aureus.%d{yyyy-MM-dd}.log</fileNamePattern>
+                <maxHistory>30</maxHistory>
+            </rollingPolicy>
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger - %msg%n</pattern>
+            </encoder>
+        </appender>
+
+        <root level="WARN">
+            <appender-ref ref="CONSOLA"/>
+            <appender-ref ref="ARCHIVO"/>
+        </root>
+        <logger name="com.aureus" level="INFO"/>
+    </springProfile>
+
+</configuration>
