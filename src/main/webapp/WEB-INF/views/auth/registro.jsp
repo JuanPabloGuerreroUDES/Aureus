@@ -10,8 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        :root { --ff-lime: #C8F135; --ff-ink: #0D0F14; --ff-teal: #1A9E8C; }
-        body { background: var(--ff-ink); min-height:100vh;
+        :root { --au-lime: #C8F135; --au-ink: #0D0F14; --au-teal: #1A9E8C; }
+        body { background: var(--au-ink); min-height:100vh;
                display:flex; align-items:center; justify-content:center; padding:2rem 0; }
         .reg-panel {
             background:#F5F2EC; border-radius:20px; overflow:hidden;
@@ -22,9 +22,9 @@
             padding:3rem; display:flex; flex-direction:column; justify-content:space-between;
         }
         .reg-logo  { font-size:1.4rem; font-weight:800; color:#fff; }
-        .reg-logo span { color:var(--ff-lime); }
+        .reg-logo span { color:var(--au-lime); }
         .reg-headline { font-size:2rem; font-weight:800; color:#fff; line-height:1.15; }
-        .reg-headline span { color:var(--ff-lime); }
+        .reg-headline span { color:var(--au-lime); }
         .feature-check { font-size:.83rem; color:rgba(255,255,255,.7); line-height:2; }
         .reg-right { padding:2.4rem; }
         .form-label  { font-size:.8rem; font-weight:600; color:#444; }
@@ -32,14 +32,14 @@
             border-radius:8px; border:1.5px solid #D8D4CA;
             background:#fff; font-size:.9rem; padding:.6rem .85rem;
         }
-        .form-control:focus { border-color:var(--ff-teal); box-shadow:0 0 0 3px rgba(26,158,140,0.15); }
+        .form-control:focus { border-color:var(--au-teal); box-shadow:0 0 0 3px rgba(26,158,140,0.15); }
         .form-control.error-field { border-color:#F25C3A; }
         .field-error { font-size:.75rem; color:#F25C3A; margin-top:.3rem; }
         .btn-register {
-            background:var(--ff-ink); color:var(--ff-lime); font-weight:700;
+            background:var(--au-ink); color:var(--au-lime); font-weight:700;
             border:none; border-radius:8px; padding:.75rem; font-size:.95rem; width:100%;
         }
-        .btn-register:hover { opacity:.9; color:var(--ff-lime); }
+        .btn-register:hover { opacity:.9; color:var(--au-lime); }
     </style>
 </head>
 <body>
@@ -47,7 +47,7 @@
     <div class="row g-0">
 
         <div class="col-md-5 reg-left">
-            <div class="reg-logo">Fin<span>Flow</span></div>
+            <div class="reg-logo">Au<span>reus</span></div>
             <div>
                 <div class="reg-headline">Tu viaje financiero <span>comienza aquí.</span></div>
                 <p class="text-white-50 mt-2" style="font-size:.88rem">

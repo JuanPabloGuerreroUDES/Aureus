@@ -9,8 +9,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
-        :root { --ff-lime: #C8F135; --ff-ink: #0D0F14; --ff-teal: #1A9E8C; }
-        body { background: var(--ff-ink); min-height: 100vh;
+        :root { --au-lime: #C8F135; --au-ink: #0D0F14; --au-teal: #1A9E8C; }
+        body { background: var(--au-ink); min-height: 100vh;
                display: flex; align-items: center; justify-content: center; }
         .login-panel {
             background: #F5F2EC; border-radius: 20px;
@@ -24,22 +24,22 @@
             min-height: 480px;
         }
         .login-logo { font-size: 1.4rem; font-weight: 800; color: #fff; }
-        .login-logo span { color: var(--ff-lime); }
+        .login-logo span { color: var(--au-lime); }
         .login-headline { font-size: 2.2rem; font-weight: 800; color: #fff; line-height: 1.15; }
-        .login-headline span { color: var(--ff-lime); }
-        .login-stat-val { font-size: 1.4rem; font-weight: 800; color: var(--ff-lime); }
+        .login-headline span { color: var(--au-lime); }
+        .login-stat-val { font-size: 1.4rem; font-weight: 800; color: var(--au-lime); }
         .login-stat-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
         .login-right { padding: 2.8rem; background: #F5F2EC; }
         .form-label { font-size: 0.8rem; font-weight: 600; color: #444; }
         .form-control { border-radius: 8px; border: 1.5px solid #D8D4CA;
                         background: #fff; font-size: 0.9rem; padding: .6rem .85rem; }
-        .form-control:focus { border-color: var(--ff-teal); box-shadow: 0 0 0 3px rgba(26,158,140,0.15); }
+        .form-control:focus { border-color: var(--au-teal); box-shadow: 0 0 0 3px rgba(26,158,140,0.15); }
         .btn-login {
-            background: var(--ff-ink); color: var(--ff-lime);
+            background: var(--au-ink); color: var(--au-lime);
             font-weight: 700; border: none; border-radius: 8px;
             padding: .75rem; font-size: 0.95rem; width: 100%; margin-top: .5rem;
         }
-        .btn-login:hover { opacity: .9; color: var(--ff-lime); }
+        .btn-login:hover { opacity: .9; color: var(--au-lime); }
     </style>
 </head>
 <body>
@@ -48,7 +48,7 @@
 
         <%-- Panel izquierdo decorativo --%>
         <div class="col-md-5 login-left">
-            <div class="login-logo">Fin<span>Flow</span></div>
+            <div class="login-logo">Au<span>reus</span></div>
             <div>
                 <div class="login-headline">
                     Controla tu dinero.<br>Construye tu <span>futuro.</span>

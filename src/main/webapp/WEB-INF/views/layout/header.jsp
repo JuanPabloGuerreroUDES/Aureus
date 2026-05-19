@@ -18,12 +18,12 @@
 
     <style>
         :root {
-            --ff-lime:   #C8F135;
-            --ff-ink:    #0D0F14;
-            --ff-teal:   #1A9E8C;
-            --ff-coral:  #F25C3A;
-            --ff-gold:   #E8A912;
-            --ff-muted:  #6E7080;
+            --au-lime:   #C8F135;
+            --au-ink:    #0D0F14;
+            --au-teal:   #1A9E8C;
+            --au-coral:  #F25C3A;
+            --au-gold:   #E8A912;
+            --au-muted:  #6E7080;
             --sidebar-w: 240px;
         }
         body { background: #F5F2EC; font-family: 'Segoe UI', sans-serif; }
@@ -32,7 +32,7 @@
         .sidebar {
             width: var(--sidebar-w);
             min-height: 100vh;
-            background: var(--ff-ink);
+            background: var(--au-ink);
             position: fixed; top:0; left:0; z-index: 100;
             display: flex; flex-direction: column;
         }
@@ -41,7 +41,7 @@
             padding: 1.2rem 1.4rem; border-bottom: 1px solid rgba(255,255,255,0.08);
             color: #fff; text-decoration: none;
         }
-        .sidebar .logo span { color: var(--ff-lime); }
+        .sidebar .logo span { color: var(--au-lime); }
         .sidebar .nav-section {
             font-size: 0.65rem; font-weight: 700;
             letter-spacing: .1em; text-transform: uppercase;
@@ -55,7 +55,7 @@
         }
         .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.05); }
         .sidebar .nav-link.active {
-            color: var(--ff-lime); border-left-color: var(--ff-lime);
+            color: var(--au-lime); border-left-color: var(--au-lime);
             background: rgba(200,241,53,0.08);
         }
         .sidebar .user-card {
@@ -65,7 +65,7 @@
         }
         .sidebar .user-avatar {
             width: 32px; height: 32px; border-radius: 50%;
-            background: var(--ff-lime); color: var(--ff-ink);
+            background: var(--au-lime); color: var(--au-ink);
             font-weight: 800; display: flex; align-items: center; justify-content: center;
             font-size: 0.85rem; flex-shrink: 0;
         }
@@ -75,16 +75,16 @@
 
         /* ── KPI cards ── */
         .kpi-card { background:#fff; border-radius:12px; padding:1.2rem; border:1px solid #E8E5DF; }
-        .kpi-card.lime  { background: var(--ff-lime); border-color: #9DC41A; }
-        .kpi-card.teal  { background: var(--ff-teal); color:#fff; border-color: var(--ff-teal); }
+        .kpi-card.lime  { background: var(--au-lime); border-color: #9DC41A; }
+        .kpi-card.teal  { background: var(--au-teal); color:#fff; border-color: var(--au-teal); }
         .kpi-value { font-size: 1.6rem; font-weight: 700; line-height:1; }
         .kpi-label { font-size: 0.7rem; font-weight:600; text-transform:uppercase;
                      letter-spacing:.06em; opacity:.6; margin-bottom:.4rem; }
 
         /* ── Progress bars ── */
-        .progress-ok   .progress-bar { background: var(--ff-teal); }
-        .progress-warn .progress-bar { background: var(--ff-gold); }
-        .progress-over .progress-bar { background: var(--ff-coral); }
+        .progress-ok   .progress-bar { background: var(--au-teal); }
+        .progress-warn .progress-bar { background: var(--au-gold); }
+        .progress-over .progress-bar { background: var(--au-coral); }
 
         /* ── Alerts ── */
         .alert-aureus {
@@ -93,15 +93,15 @@
         }
 
         /* ── Badges ── */
-        .badge-income  { background: #E0F5F2; color: var(--ff-teal); }
-        .badge-expense { background: #FEE9E4; color: var(--ff-coral); }
-        .badge-fixed   { background: #EDE9DF; color: var(--ff-muted); }
+        .badge-income  { background: #E0F5F2; color: var(--au-teal); }
+        .badge-expense { background: #FEE9E4; color: var(--au-coral); }
+        .badge-fixed   { background: #EDE9DF; color: var(--au-muted); }
 
         /* ── Tables ── */
         .table-aureus th {
             font-size: 0.7rem; font-weight: 700;
             letter-spacing: .06em; text-transform: uppercase;
-            color: var(--ff-muted); background: #F5F2EC;
+            color: var(--au-muted); background: #F5F2EC;
         }
         .table-aureus td { vertical-align: middle; font-size: 0.875rem; }
 
@@ -118,7 +118,7 @@
 
 <%-- ── SIDEBAR ── --%>
 <aside class="sidebar">
-    <a class="logo" href="/dashboard">Fin<span>Flow</span></a>
+    <a class="logo" href="/dashboard">Au<span>reus</span></a>
 
     <div class="nav-section">Principal</div>
     <a class="nav-link ${pageId == 'dashboard' ? 'active' : ''}" href="/dashboard">
