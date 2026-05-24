@@ -17,7 +17,10 @@ import java.util.Optional;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
-    /** Todas las cuentas del usuario autenticado. */
+    /** Todas las cuentas del usuario autenticado, ordenadas por nombre (U8 §5.3). */
+    List<Account> findByUserOrderByNameAsc(User user);
+
+    /** Alias sin orden explícito — mantenido por compatibilidad interna. */
     List<Account> findByUser(User user);
 
     /** Busca una cuenta por ID y usuario (previene IDOR). */

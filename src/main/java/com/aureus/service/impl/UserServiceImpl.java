@@ -7,7 +7,11 @@ import com.aureus.exception.EmailDuplicadoException;
 import com.aureus.exception.PasswordIncorrectoException;
 import com.aureus.exception.RecursoNoEncontradoException;
 import com.aureus.exception.ValidacionException;
+import com.aureus.model.Account;
+import com.aureus.model.Account;
 import com.aureus.model.User;
+import java.util.List;
+import com.aureus.repository.AccountRepository;
 import com.aureus.repository.UserRepository;
 import com.aureus.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -28,20 +32,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)  // U8 §7.2: lecturas no necesitan transacción de escritura
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final UserRepository    userRepository;
+    private final AccountRepository  accountRepository;
+    private final PasswordEncoder    passwordEncoder;
 
     @Override
+    @Transactional
     public User registrar(RegistroDto dto) {
         log.info("Registrando nuevo usuario: {}", dto.getEmail());
         validarRegistro(dto);
 
         User user = construirUsuario(dto);
         User guardado = userRepository.save(user);
-        log.info("Usuario registrado con id={}", guardado.getId());
+        // Crear cuenta principal por defecto para que pueda registrar transacciones de inmediato
+        accountRepository.save(new Account("Cuenta principal", guardado));
+        log.info("Usuario registrado con id={} y cuenta principal creada", guardado.getId());
         return guardado;
     }
 
@@ -61,6 +69,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public User actualizarPerfil(Long userId, ActualizarPerfilDto dto) {
         User user = buscarPorId(userId);
         user.setName(dto.getName());
@@ -69,6 +78,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void cambiarPassword(Long userId, CambiarPasswordDto dto) {
         validarCambioPassword(dto);
         User user = buscarPorId(userId);
@@ -79,6 +89,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void desactivarCuenta(Long userId) {
         User user = buscarPorId(userId);
         user.setActivo(false);
@@ -117,5 +128,11 @@ public class UserServiceImpl implements UserService {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new PasswordIncorrectoException();
         }
+    }
+
+
+    @Override
+    public List<Account> listarCuentas(User usuario) {
+        return accountRepository.findByUserOrderByNameAsc(usuario);
     }
 }

@@ -135,7 +135,7 @@
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 <c:choose>
                                     <c:when test="${empty cuentaSeleccionada}">
-                                        Selecciona una cuenta para ver sus transacciones.
+                                        <c:choose><c:when test="${empty cuentas}">No tienes cuentas creadas. Cierra sesión, vuelve a entrar y se creará automáticamente.</c:when><c:otherwise>Selecciona una cuenta arriba para ver sus transacciones.</c:otherwise></c:choose>
                                     </c:when>
                                     <c:otherwise>
                                         No hay transacciones en este período.
@@ -216,6 +216,7 @@
                         <div class="col-6">
                             <label class="form-label" style="font-size:.82rem">Cuenta</label>
                             <select name="accountId" class="form-select form-select-sm" required>
+                                <option value="" disabled selected>— Seleccionar cuenta —</option>
                                 <c:forEach var="cuenta" items="${cuentas}">
                                     <option value="${cuenta.id}">
                                         <c:out value="${cuenta.name}"/>

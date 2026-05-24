@@ -23,18 +23,39 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     // ── Consultas con protección IDOR (filtran por cuenta/usuario) ────────
 
-    /** Todas las transacciones de una cuenta, ordenadas por fecha desc. */
-    List<Transaction> findByAccountOrderByDateDesc(Account account);
+    /**
+     * Todas las transacciones de una cuenta, ordenadas por fecha desc.
+     * JOIN FETCH carga category y account en el mismo SELECT (U8 §6.2),
+     * evitando LazyInitializationException al acceder desde JSP.
+     */
+    @Query("""
+           SELECT t FROM Transaction t
+           LEFT JOIN FETCH t.category
+           JOIN FETCH t.account
+           WHERE t.account = :account
+           ORDER BY t.date DESC
+           """)
+    List<Transaction> findByAccountOrderByDateDesc(@Param("account") Account account);
 
     /** Busca transacción por ID y cuenta (protección IDOR). */
     Optional<Transaction> findByIdAndAccount(Long id, Account account);
 
     /**
-     * Transacciones de una cuenta en un rango de fechas.
-     * Usado para reportes mensuales y simulaciones.
+     * Transacciones de una cuenta en un rango de fechas, con JOIN FETCH (U8 §6.2).
+     * Usado para reportes mensuales — carga category en el mismo SELECT.
      */
+    @Query("""
+           SELECT t FROM Transaction t
+           LEFT JOIN FETCH t.category
+           JOIN FETCH t.account
+           WHERE t.account = :account
+             AND t.date BETWEEN :desde AND :hasta
+           ORDER BY t.date DESC
+           """)
     List<Transaction> findByAccountAndDateBetweenOrderByDateDesc(
-            Account account, LocalDate desde, LocalDate hasta);
+            @Param("account") Account account,
+            @Param("desde") LocalDate desde,
+            @Param("hasta") LocalDate hasta);
 
     /**
      * Transacciones de una cuenta por categoría.

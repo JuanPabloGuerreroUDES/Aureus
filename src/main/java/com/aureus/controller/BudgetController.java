@@ -2,7 +2,6 @@ package com.aureus.controller;
 
 import com.aureus.dto.budget.PresupuestoDto;
 import com.aureus.model.User;
-import com.aureus.repository.AccountRepository;
 import com.aureus.repository.CategoryRepository;
 import com.aureus.service.BudgetService;
 import com.aureus.service.UserService;
@@ -29,7 +28,6 @@ public class BudgetController {
 
     private final BudgetService budgetService;
     private final UserService userService;
-    private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
 
     // ── Listar presupuestos activos ───────────────────────────────────────
@@ -41,7 +39,7 @@ public class BudgetController {
             Model model) {
 
         User usuario = userService.buscarPorEmail(userDetails.getUsername());
-        var cuentas = accountRepository.findByUser(usuario);
+        var cuentas = userService.listarCuentas(usuario);
 
         model.addAttribute("cuentas", cuentas);
         model.addAttribute("categorias", categoryRepository.findAll());

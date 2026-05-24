@@ -105,6 +105,24 @@
         }
         .table-aureus td { vertical-align: middle; font-size: 0.875rem; }
 
+        /* ── Botón cerrar sesión ── */
+        .btn-logout {
+            background: rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.75);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: .45rem .8rem;
+            text-align: left;
+            transition: background .18s, color .18s, border-color .18s;
+        }
+        .btn-logout:hover {
+            background: var(--au-coral);
+            color: #fff;
+            border-color: var(--au-coral);
+        }
+
         /* ── CSRF token hidden (accesible en JS si se necesita) ── */
         #csrf-meta { display: none; }
     </style>
@@ -147,7 +165,8 @@
     </sec:authorize>
 
     <div class="user-card">
-        <div class="d-flex align-items-center gap-2">
+        <%-- Info del usuario --%>
+        <div class="d-flex align-items-center gap-2 mb-2">
             <div class="user-avatar">
                 <sec:authentication property="principal.username" var="userEmail"/>
                 <c:out value="${userEmail.substring(0,1).toUpperCase()}"/>
@@ -160,15 +179,14 @@
                     <sec:authentication property="authorities"/>
                 </div>
             </div>
-            <form action="/auth/logout" method="post" class="m-0">
-                <%-- Token CSRF obligatorio en POST (Unidad 9 - Sección 6.1) --%>
-                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
-                <button type="submit" class="btn btn-sm p-0 text-muted"
-                        title="Cerrar sesión">
-                    <i class="bi bi-box-arrow-right"></i>
-                </button>
-            </form>
         </div>
+        <%-- Botón de cierre de sesión destacado --%>
+        <form action="/auth/logout" method="post" class="m-0">
+            <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+            <button type="submit" class="btn btn-logout w-100">
+                <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+            </button>
+        </form>
     </div>
 </aside>
 

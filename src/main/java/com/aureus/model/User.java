@@ -56,7 +56,7 @@ public class User {
      * Spring Security verifica con passwordEncoder.matches() automáticamente.
      */
     @NotBlank(message = "La contraseña es obligatoria")
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false, length = 255)
     private String password;
 
     // ── Campos de seguridad y autorización ───────────────────────────────
@@ -65,14 +65,14 @@ public class User {
      * Rol del usuario. Convención Spring Security: "ROLE_USER" o "ROLE_ADMIN".
      * Para múltiples roles se usaría una tabla separada; aquí un solo rol por simplicidad.
      */
-    @Column(nullable = false, length = 20)
+    @Column(name = "rol", nullable = false, length = 20)
     private String rol = "ROLE_USER";
 
     /**
      * Cuenta activa. Permite deshabilitar sin borrar (GDPR-friendly).
      * UserDetailsService usa este campo en .disabled(!user.isActivo()).
      */
-    @Column(nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activo = true;
 
     // ── Relaciones ───────────────────────────────────────────────────────

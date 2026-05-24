@@ -49,15 +49,15 @@ public abstract class Transaction {
     private LocalDate date;
 
     @Size(max = 255, message = "La descripción no puede superar 255 caracteres")
-    @Column(length = 255)
+    @Column(name = "description", length = 255)
     private String description;
 
-    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "cuenta_id", nullable = false,
                 foreignKey = @ForeignKey(name = "fk_transaccion_cuenta"))
     private Account account;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id",
                 foreignKey = @ForeignKey(name = "fk_transaccion_categoria"))
     private Category category;

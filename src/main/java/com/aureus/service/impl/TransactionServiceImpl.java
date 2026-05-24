@@ -25,7 +25,7 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)  // U8 §7.2
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
@@ -35,6 +35,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionFactory    transactionFactory;
 
     @Override
+    @Transactional
     public Transaction registrar(TransaccionDto dto, User usuario) {
         Account  account  = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
         Category category = resolverCategoria(dto.getCategoryId());
@@ -49,6 +50,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public Transaction editar(Long transaccionId, TransaccionDto dto, User usuario) {
         Account account = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
         Transaction t   = obtenerTransaccionDeAccount(transaccionId, account);
@@ -61,6 +63,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void eliminar(Long transaccionId, Long cuentaId, User usuario) {
         Account     account = obtenerCuentaDelUsuario(cuentaId, usuario);
         Transaction t       = obtenerTransaccionDeAccount(transaccionId, account);

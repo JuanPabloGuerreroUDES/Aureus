@@ -31,7 +31,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)  // U8 §7.2
 public class BudgetServiceImpl implements BudgetService {
 
     private final BudgetRepository budgetRepository;
@@ -40,6 +40,7 @@ public class BudgetServiceImpl implements BudgetService {
     private final TransactionRepository transactionRepository;
 
     @Override
+    @Transactional
     public Budget crear(PresupuestoDto dto, User usuario) {
         Account account = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
         Category category = obtenerCategoria(dto.getCategoryId());
@@ -55,6 +56,7 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     @Override
+    @Transactional
     public Budget actualizar(Long id, PresupuestoDto dto, User usuario) {
         Account account = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
         Budget budget = obtenerPresupuestoDeAccount(id, account);
@@ -66,6 +68,7 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     @Override
+    @Transactional
     public void eliminar(Long id, Long cuentaId, User usuario) {
         Account account = obtenerCuentaDelUsuario(cuentaId, usuario);
         Budget budget = obtenerPresupuestoDeAccount(id, account);

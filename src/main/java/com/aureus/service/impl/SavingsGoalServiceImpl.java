@@ -18,12 +18,13 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)  // U8 §7.2
 public class SavingsGoalServiceImpl implements SavingsGoalService {
 
     private final SavingsGoalRepository goalRepository;
 
     @Override
+    @Transactional
     public SavingsGoal crear(MetaAhorroDto dto, User usuario) {
         SavingsGoal meta = new SavingsGoal(
                 dto.getGoalName(), dto.getTargetAmount(),
@@ -33,6 +34,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     }
 
     @Override
+    @Transactional
     public SavingsGoal registrarAporte(AporteMetaDto dto, User usuario) {
         SavingsGoal meta = obtenerMetaDelUsuario(dto.getGoalId(), usuario);
         meta.registrarAporte(dto.getAporte());
@@ -41,6 +43,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     }
 
     @Override
+    @Transactional
     public SavingsGoal editar(Long id, MetaAhorroDto dto, User usuario) {
         SavingsGoal meta = obtenerMetaDelUsuario(id, usuario);
         meta.setGoalName(dto.getGoalName());
@@ -50,6 +53,7 @@ public class SavingsGoalServiceImpl implements SavingsGoalService {
     }
 
     @Override
+    @Transactional
     public void eliminar(Long id, User usuario) {
         SavingsGoal meta = obtenerMetaDelUsuario(id, usuario);
         goalRepository.delete(meta);

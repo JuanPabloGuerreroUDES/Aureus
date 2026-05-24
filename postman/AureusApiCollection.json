@@ -1,0 +1,265 @@
+{
+  "info": {
+    "name": "Aureus API — Pruebas REST",
+    "_postman_id": "aureus-api-collection-v1",
+    "description": "Colección de pruebas REST para los endpoints JWT de Aureus.\nImplementa los conceptos de U10 §6: colecciones, entornos, pre-request scripts y test scripts.\n\nFlujo:\n1. POST /api/auth/login → obtiene JWT → lo guarda en variable de colección\n2. Requests autenticados usan {{token}} automáticamente",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "URL base de la aplicación Aureus"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "JWT generado por /api/auth/login. Se rellena automáticamente."
+    },
+    {
+      "key": "usuarioEmail",
+      "value": "demo@aureus.com",
+      "type": "string"
+    },
+    {
+      "key": "usuarioPassword",
+      "value": "Demo2026!",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Endpoints de autenticación JWT (U10 §6.1 — organización en carpetas)",
+      "item": [
+        {
+          "name": "Login exitoso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// U10 §6.2 — Test Scripts con librería pm",
+                  "",
+                  "pm.test('Status code es 200', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('La respuesta contiene el token JWT', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('token');",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.').length).to.equal(3); // header.payload.signature",
+                  "    // Guardar el token para requests autenticados posteriores",
+                  "    pm.collectionVariables.set('token', body.token);",
+                  "});",
+                  "",
+                  "pm.test('La respuesta contiene email y tipo Bearer', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.email).to.equal(pm.collectionVariables.get('usuarioEmail'));",
+                  "    pm.expect(body.tipo).to.equal('Bearer');",
+                  "});",
+                  "",
+                  "pm.test('El tiempo de respuesta es menor a 2000ms', () => {",
+                  "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{usuarioEmail}}\",\n  \"password\": \"{{usuarioPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Autentica un usuario y obtiene un JWT. El token se guarda automáticamente en la variable de colección 'token'."
+          }
+        },
+        {
+          "name": "Login con credenciales incorrectas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code es 401', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('El mensaje de error es genérico (no revela existencia del usuario)', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('error');",
+                  "    // No debe revelar si el email existe (OWASP A07)",
+                  "    pm.expect(body.error).to.not.include('email');",
+                  "    pm.expect(body.error).to.not.include('no encontrado');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{usuarioEmail}}\",\n  \"password\": \"contraseña_incorrecta\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Verifica que credenciales incorrectas retornan 401 con mensaje genérico (A07 OWASP)."
+          }
+        },
+        {
+          "name": "Registro de nuevo usuario",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Pre-request Script: genera un email único para evitar duplicados",
+                  "const timestamp = Date.now();",
+                  "pm.collectionVariables.set('nuevoEmail', `test${timestamp}@aureus.com`);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code es 201 Created', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('La respuesta contiene un JWT válido', () => {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.token).to.be.a('string');",
+                  "    pm.expect(body.token.split('.').length).to.equal(3);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Usuario Test\",\n  \"email\": \"{{nuevoEmail}}\",\n  \"password\": \"Segura123!\",\n  \"confirmPassword\": \"Segura123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/registro",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "registro"]
+            },
+            "description": "Registra un nuevo usuario. El pre-request script genera un email único con timestamp."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard (autenticado)",
+      "description": "Endpoints que requieren autenticación JWT. Usan el token guardado por el request de login.",
+      "item": [
+        {
+          "name": "Acceso al dashboard con JWT válido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code es 200 — acceso concedido con JWT', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Content-Type es HTML (vista JSP)', () => {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('text/html');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard"]
+            },
+            "description": "Accede al dashboard con el JWT generado por el request de login."
+          }
+        },
+        {
+          "name": "Acceso sin JWT retorna 401 o redirect",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Acceso sin token retorna 401 o redirect a login', () => {",
+                  "    const statusCode = pm.response.code;",
+                  "    // Spring Security puede retornar 401 (API) o 302 (MVC redirect)",
+                  "    pm.expect([401, 302, 200]).to.include(statusCode);",
+                  "    if (statusCode === 200) {",
+                  "        // Si es 200, debe ser la página de login (redirect seguido)",
+                  "        pm.expect(pm.response.text()).to.include('login');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard"]
+            },
+            "description": "Verifica que el endpoint protegido rechaza peticiones sin autenticación."
+          }
+        }
+      ]
+    }
+  ]
+}

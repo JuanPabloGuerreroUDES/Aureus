@@ -43,7 +43,7 @@ public class SavingsGoal {
     @NotNull(message = "La fecha límite es obligatoria")
     @Future(message = "La fecha límite debe ser futura")
     @Column(name = "fecha_limite", nullable = false)
-    private LocalDate deadline;
+    private LocalDate deadline; // LocalDate → DATE en MySQL
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "usuario_id", nullable = false,

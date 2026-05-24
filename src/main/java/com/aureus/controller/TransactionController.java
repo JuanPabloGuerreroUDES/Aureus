@@ -2,7 +2,6 @@ package com.aureus.controller;
 
 import com.aureus.dto.transaction.TransaccionDto;
 import com.aureus.model.User;
-import com.aureus.repository.AccountRepository;
 import com.aureus.repository.CategoryRepository;
 import com.aureus.service.TransactionService;
 import com.aureus.service.UserService;
@@ -26,7 +25,6 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final UserService        userService;
-    private final AccountRepository  accountRepository;
     private final CategoryRepository categoryRepository;
 
     @GetMapping
@@ -36,7 +34,7 @@ public class TransactionController {
                          @RequestParam(required = false, defaultValue = "0") int anio,
                          Model model) {
         User usuario = userService.buscarPorEmail(ud.getUsername());
-        model.addAttribute("cuentas",      accountRepository.findByUser(usuario));
+        model.addAttribute("cuentas",      userService.listarCuentas(usuario));
         model.addAttribute("categorias",   categoryRepository.findAll());
         model.addAttribute("transaccionDto", new TransaccionDto());
 

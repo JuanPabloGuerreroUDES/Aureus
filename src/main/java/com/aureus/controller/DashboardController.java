@@ -2,7 +2,6 @@ package com.aureus.controller;
 
 import com.aureus.model.Account;
 import com.aureus.model.User;
-import com.aureus.repository.AccountRepository;
 import com.aureus.service.SavingsGoalService;
 import com.aureus.service.TransactionService;
 import com.aureus.service.UserService;
@@ -37,14 +36,14 @@ public class DashboardController {
     private final UserService userService;
     private final TransactionService transactionService;
     private final SavingsGoalService savingsGoalService;
-    private final AccountRepository accountRepository;
 
     @GetMapping
     public String dashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         // Carga el usuario completo de la BD (UserDetails solo tiene email y rol)
         User usuario = userService.buscarPorEmail(userDetails.getUsername());
 
-        List<Account> cuentas = accountRepository.findByUser(usuario);
+        // Acceso a cuentas a través del servicio — respeta la arquitectura por capas (U8 §7.1)
+        List<Account> cuentas = userService.listarCuentas(usuario);
 
         model.addAttribute("usuario", usuario);
         model.addAttribute("cuentas", cuentas);
