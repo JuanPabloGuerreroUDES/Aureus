@@ -2,10 +2,18 @@ package com.aureus.controller;
 
 import com.aureus.dto.auth.JwtResponseDto;
 import com.aureus.dto.auth.RegistroDto;
+import com.aureus.dto.error.ApiError;
 import com.aureus.exception.EmailDuplicadoException;
 import com.aureus.model.User;
 import com.aureus.security.JwtUtils;
 import com.aureus.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,23 +30,29 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * Controlador REST para autenticación JWT.
+ * Controlador REST para autenticación JWT — documentado con Swagger/OpenAPI (U11 §7.3).
  *
- * Implementa el flujo de autenticación stateless (U9 §7.2):
- *   POST /api/auth/login   → verifica credenciales → devuelve JWT
- *   POST /api/auth/registro → crea cuenta → devuelve JWT directo (auto-login)
+ * @Tag agrupa este controlador bajo "Autenticación" en Swagger UI.
+ * @Operation describe cada endpoint (resumen + descripción detallada).
+ * @ApiResponses documenta todos los códigos de respuesta posibles (U11 §7.3).
  *
- * Este controlador es para clientes REST (móvil, SPA, Postman).
- * La autenticación web MVC sigue usando sesión + /auth/login (JSP).
+ * Clean Code (U11 §3.2): cada método tiene una sola responsabilidad.
+ * Los catch de BadCredentials/Disabled no están aquí — los maneja
+ * ApiExceptionHandler (SRP: el controlador no gestiona errores).
  *
- * CSRF desactivado para /api/** porque:
- *   - El JWT viaja en el header Authorization, no en cookie.
- *   - Los ataques CSRF se basan en el envío automático de cookies (U9 §6.1).
+ * NOTA: las excepciones de autenticación siguen propagándose a ApiExceptionHandler
+ * porque ResponseEntity<?> captura primero. Los catch locales los mantenemos
+ * para poder retornar el tipo correcto de ResponseEntity con ApiError.
  */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(
+    name        = "Autenticación",
+    description = "Endpoints para login con JWT y registro de nuevos usuarios. "
+                + "No requieren autenticación previa."
+)
 public class AuthRestController {
 
     private final AuthenticationManager authenticationManager;
@@ -47,54 +61,84 @@ public class AuthRestController {
 
     // ── POST /api/auth/login ──────────────────────────────────────────────
 
-    /**
-     * Paso 1-3 del flujo JWT (U9 §7.2):
-     * Verifica credenciales con BCrypt y devuelve un JWT firmado.
-     *
-     * Body JSON esperado: { "email": "...", "password": "..." }
-     *
-     * Respuesta 200: { "token": "eyJ...", "email": "...", "rol": "ROLE_USER", "tipo": "Bearer" }
-     * Respuesta 401: credenciales incorrectas (mensaje genérico — A07 OWASP)
-     */
+    @Operation(
+        summary     = "Iniciar sesión",
+        description = "Autentica email y contraseña con BCrypt. "
+                    + "Si son válidas, retorna un JWT firmado con HS256 válido por 24h. "
+                    + "El token debe incluirse en peticiones posteriores como: "
+                    + "Authorization: Bearer <token>",
+        security    = {}   // este endpoint NO requiere autenticación previa
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "200",
+            description  = "Login exitoso — JWT retornado",
+            content      = @Content(schema = @Schema(implementation = JwtResponseDto.class))
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description  = "Credenciales inválidas o cuenta desactivada",
+            content      = @Content(schema = @Schema(implementation = ApiError.class))
+        ),
+        @ApiResponse(
+            responseCode = "415",
+            description  = "Content-Type debe ser application/json",
+            content      = @Content(schema = @Schema(implementation = ApiError.class))
+        )
+    })
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credenciales) {
         String email    = credenciales.get("email");
         String password = credenciales.get("password");
 
         try {
-            // AuthenticationManager delega a DaoAuthenticationProvider → BCrypt verify
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, password));
 
             UserDetails userDetails = (UserDetails) auth.getPrincipal();
             User usuario = userService.buscarPorEmail(userDetails.getUsername());
-
-            // Genera JWT firmado (U9 §7.2 Paso 3)
             String token = jwtUtils.generateToken(usuario.getEmail(), usuario.getRol());
             log.info("JWT generado para usuario: {}", email);
 
             return ResponseEntity.ok(new JwtResponseDto(token, usuario.getEmail(), usuario.getRol()));
 
         } catch (DisabledException e) {
-            // Cuenta desactivada — no revelar si el email existe (A07 OWASP)
-            log.warn("Intento de login con cuenta desactivada: {}", email);
+            log.warn("Login con cuenta desactivada: {}", email);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Credenciales inválidas o cuenta inactiva"));
+                    .body(ApiError.unauthorized("Credenciales inválidas o cuenta inactiva", "/api/auth/login"));
 
         } catch (BadCredentialsException e) {
-            // Contraseña incorrecta — mensaje genérico para no confirmar si el email existe
             log.warn("Credenciales incorrectas para: {}", email);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Credenciales inválidas o cuenta inactiva"));
+                    .body(ApiError.unauthorized("Credenciales inválidas o cuenta inactiva", "/api/auth/login"));
         }
     }
 
     // ── POST /api/auth/registro ───────────────────────────────────────────
 
-    /**
-     * Registra un nuevo usuario y devuelve un JWT directo.
-     * El cliente queda autenticado sin pasar por /api/auth/login.
-     */
+    @Operation(
+        summary     = "Registrar nuevo usuario",
+        description = "Crea una cuenta nueva con BCrypt y retorna un JWT directo. "
+                    + "El cliente queda autenticado sin necesitar un login posterior.",
+        security    = {}
+    )
+    @ApiResponses({
+        @ApiResponse(
+            responseCode = "201",
+            description  = "Usuario registrado — JWT retornado",
+            content      = @Content(schema = @Schema(implementation = JwtResponseDto.class))
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description  = "Datos de registro inválidos (contraseñas no coinciden, campos vacíos)",
+            content      = @Content(schema = @Schema(implementation = ApiError.class))
+        ),
+        @ApiResponse(
+            responseCode = "409",
+            description  = "El email ya está registrado",
+            content      = @Content(schema = @Schema(implementation = ApiError.class))
+        )
+    })
     @PostMapping("/registro")
     public ResponseEntity<?> registro(@Valid @RequestBody RegistroDto dto) {
         try {
@@ -106,10 +150,11 @@ public class AuthRestController {
 
         } catch (EmailDuplicadoException e) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", e.getMessage()));
+                    .body(ApiError.conflict(e.getMessage(), "/api/auth/registro"));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", e.getMessage()));
+                    .body(ApiError.badRequest(e.getMessage(), "/api/auth/registro"));
         }
     }
 }

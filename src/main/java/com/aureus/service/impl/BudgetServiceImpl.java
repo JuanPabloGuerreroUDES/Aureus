@@ -86,6 +86,15 @@ public class BudgetServiceImpl implements BudgetService {
                         account, hoy, hoy);
     }
 
+    /**
+     * Calcula el porcentaje de uso de un presupuesto.
+     *
+     * El budget recibido tiene account y category ya inicializados porque
+     * BudgetRepository.findByAccountAndStartDateLessThanEqualAndEndDateGreaterThanEqual
+     * usa JOIN FETCH. Entonces budget.getAccount() y budget.getCategory()
+     * no son proxies lazy sino objetos completos, y pueden pasarse como
+     * parámetros al sumExpensesByAccountCategoryAndPeriod sin problema.
+     */
     @Override
     @Transactional(readOnly = true)
     public double calcularPorcentajeUso(Budget budget) {

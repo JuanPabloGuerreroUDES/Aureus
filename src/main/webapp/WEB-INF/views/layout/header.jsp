@@ -165,8 +165,9 @@
     </sec:authorize>
 
     <div class="user-card">
-        <%-- Info del usuario --%>
-        <div class="d-flex align-items-center gap-2 mb-2">
+        <%-- Info del usuario con link a perfil --%>
+        <a href="/perfil" class="d-flex align-items-center gap-2 mb-2 text-decoration-none"
+           style="color:inherit">
             <div class="user-avatar">
                 <sec:authentication property="principal.username" var="userEmail"/>
                 <c:out value="${userEmail.substring(0,1).toUpperCase()}"/>
@@ -175,11 +176,9 @@
                 <div class="text-white fw-500" style="font-size:.8rem">
                     <sec:authentication property="principal.username"/>
                 </div>
-                <div style="font-size:.7rem;opacity:.4">
-                    <sec:authentication property="authorities"/>
-                </div>
+                <div style="font-size:.7rem;opacity:.4;color:#C8F135">Ver perfil →</div>
             </div>
-        </div>
+        </a>
         <%-- Botón de cierre de sesión destacado --%>
         <form action="/auth/logout" method="post" class="m-0">
             <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">

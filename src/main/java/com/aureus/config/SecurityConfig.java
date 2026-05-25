@@ -153,6 +153,14 @@ public class SecurityConfig {
                     "/h2-console/**"
                 ).permitAll()
 
+                // Swagger UI y OpenAPI spec — públicos en desarrollo (U11 §7.1)
+                // En producción, considerar restringir a ADMIN o red interna.
+                .requestMatchers(
+                    "/swagger-ui.html", "/swagger-ui/**",
+                    "/api-docs",        "/api-docs/**",
+                    "/v3/api-docs",     "/v3/api-docs/**"
+                ).permitAll()
+
                 // Solo ADMIN (U9 §5.1 — hasRole)
                 .requestMatchers("/admin/**").hasRole("ADMIN")
 

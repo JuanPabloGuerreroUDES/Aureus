@@ -16,10 +16,12 @@
             <c:out value="${resumen != null ? resumen.periodoLabel : ''}"/> · Tu balance va bien este mes
         </p>
     </div>
-    <a href="/transacciones/nueva" class="btn btn-sm"
-       style="background:#0D0F14;color:#C8F135;font-weight:600;border-radius:8px;padding:.5rem 1rem">
+    <%-- FIX: antes apuntaba a GET /transacciones/nueva que no existe.
+         Ahora abre el modal de nueva transacción directamente. --%>
+    <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaQuick"
+            style="background:#0D0F14;color:#C8F135;font-weight:600;border-radius:8px;padding:.5rem 1rem">
         <i class="bi bi-plus-lg"></i> Agregar
-    </a>
+    </button>
 </div>
 
 <%-- ── KPI ROW ── --%>
@@ -176,5 +178,70 @@
         </div>
     </div>
 </div>
+
+<%-- ── MODAL: transacción rápida desde el dashboard ── --%>
+<div class="modal fade" id="modalNuevaQuick" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius:16px;border:none">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Registrar transacción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="/transacciones/nueva" method="post">
+                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}">
+                    <div class="mb-3">
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" value="GASTO" checked>
+                                <label class="form-check-label"><i class="bi bi-arrow-up-right text-danger me-1"></i>Gasto</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" value="INGRESO">
+                                <label class="form-check-label"><i class="bi bi-arrow-down-left text-success me-1"></i>Ingreso</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Monto ($)</label>
+                            <input type="number" name="amount" class="form-control form-control-sm"
+                                   step="0.01" min="0.01" required placeholder="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Fecha</label>
+                            <input type="date" name="date" class="form-control form-control-sm"
+                                   id="fechaQuick" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem">Descripción</label>
+                        <input type="text" name="description" class="form-control form-control-sm"
+                               placeholder="Ej. Supermercado" maxlength="255">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem">Cuenta</label>
+                        <select name="accountId" class="form-select form-select-sm" required>
+                            <option value="" disabled selected>— Seleccionar —</option>
+                            <c:forEach var="cuenta" items="${cuentas}">
+                                <option value="${cuenta.id}"><c:out value="${cuenta.name}"/></option>
+                            </c:forEach>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn w-100 fw-bold"
+                            style="background:#0D0F14;color:#C8F135;border-radius:8px">
+                        <i class="bi bi-check-lg me-1"></i>Registrar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const f = document.getElementById('fechaQuick');
+    if (f) f.value = new Date().toISOString().split('T')[0];
+});
+</script>
 
 <%@ include file="/WEB-INF/views/layout/footer.jsp" %>
