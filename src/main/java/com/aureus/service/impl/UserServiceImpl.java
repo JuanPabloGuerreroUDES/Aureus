@@ -48,7 +48,9 @@ public class UserServiceImpl implements UserService {
         User user = construirUsuario(dto);
         User guardado = userRepository.save(user);
         // Crear cuenta principal por defecto para que pueda registrar transacciones de inmediato
-        accountRepository.save(new Account("Cuenta principal", guardado));
+        Account cuentaPrincipal = new Account("Cuenta principal", guardado);
+        cuentaPrincipal.setEsPrincipal(true);
+        accountRepository.save(cuentaPrincipal);
         log.info("Usuario registrado con id={} y cuenta principal creada", guardado.getId());
         return guardado;
     }
@@ -133,6 +135,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<Account> listarCuentas(User usuario) {
-        return accountRepository.findByUserOrderByNameAsc(usuario);
+        return accountRepository.findByUserOrderByEsPrincipalDescNameAsc(usuario);
     }
 }

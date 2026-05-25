@@ -142,6 +142,9 @@
     <a class="nav-link ${pageId == 'dashboard' ? 'active' : ''}" href="/dashboard">
         <i class="bi bi-grid-1x2"></i> Dashboard
     </a>
+    <a class="nav-link ${pageId == 'cuentas' ? 'active' : ''}" href="/cuentas">
+        <i class="bi bi-wallet2"></i> Cuentas
+    </a>
     <a class="nav-link ${pageId == 'transacciones' ? 'active' : ''}" href="/transacciones">
         <i class="bi bi-arrow-down-up"></i> Transacciones
     </a>

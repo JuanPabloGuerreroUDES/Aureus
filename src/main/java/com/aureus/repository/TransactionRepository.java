@@ -25,7 +25,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     /**
      * Todas las transacciones de una cuenta, ordenadas por fecha desc.
-     * JOIN FETCH carga category y account en el mismo SELECT (U8 §6.2),
+     * JOIN FETCH carga category y account en el mismo SELECT,
      * evitando LazyInitializationException al acceder desde JSP.
      */
     @Query("""
@@ -41,7 +41,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Optional<Transaction> findByIdAndAccount(Long id, Account account);
 
     /**
-     * Transacciones de una cuenta en un rango de fechas, con JOIN FETCH (U8 §6.2).
+     * Transacciones de una cuenta en un rango de fechas, con JOIN FETCH.
      * Usado para reportes mensuales — carga category en el mismo SELECT.
      */
     @Query("""
@@ -57,16 +57,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
 
-    /**
-     * Transacciones de una cuenta por categoría.
-     */
+    /** Transacciones de una cuenta por categoría. */
     List<Transaction> findByAccountAndCategory(Account account, Category category);
 
-    // ── Agregaciones para reportes ────────────────────────────────────────
+    // ── Agregaciones para reportes mensuales ─────────────────────────────
 
     /**
-     * Suma total de gastos (tipo GASTO) de una cuenta en un período.
-     * Usa JPQL con TYPE() para filtrar por subclase.
+     * Suma total de gastos de una cuenta en un período (filtrado por mes).
      */
     @Query("""
            SELECT COALESCE(SUM(t.amount), 0)
@@ -81,7 +78,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("hasta") LocalDate hasta);
 
     /**
-     * Suma total de ingresos (tipo INGRESO) de una cuenta en un período.
+     * Suma total de ingresos de una cuenta en un período (filtrado por mes).
      */
     @Query("""
            SELECT COALESCE(SUM(t.amount), 0)
@@ -97,6 +94,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     /**
      * Suma gastos de una cuenta por categoría en un período.
+     * Usado por BudgetService para calcular el porcentaje de uso.
      */
     @Query("""
            SELECT COALESCE(SUM(t.amount), 0)
@@ -111,4 +109,31 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("category") Category category,
             @Param("desde") LocalDate desde,
             @Param("hasta") LocalDate hasta);
+
+    // ── Agregaciones de balance total (histórico, sin filtro de fecha) ────
+
+    /**
+     * Suma TODOS los ingresos de una cuenta desde su creación.
+     *
+     * Usado por el dashboard para mostrar el balance acumulado real
+     * en lugar del balance del mes actual solamente.
+     */
+    @Query("""
+           SELECT COALESCE(SUM(t.amount), 0)
+           FROM Transaction t
+           WHERE t.account = :account
+             AND TYPE(t) = com.aureus.model.Income
+           """)
+    double sumTotalIncomesByAccount(@Param("account") Account account);
+
+    /**
+     * Suma TODOS los gastos de una cuenta desde su creación.
+     */
+    @Query("""
+           SELECT COALESCE(SUM(t.amount), 0)
+           FROM Transaction t
+           WHERE t.account = :account
+             AND TYPE(t) = com.aureus.model.Expense
+           """)
+    double sumTotalExpensesByAccount(@Param("account") Account account);
 }

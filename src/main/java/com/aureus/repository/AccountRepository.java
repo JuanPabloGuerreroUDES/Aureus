@@ -8,24 +8,19 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Repositorio de Cuenta.
- *
- * IDOR prevention: todos los métodos filtran por 'user' para garantizar
- * que un usuario solo acceda a sus propias cuentas.
- */
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
-    /** Todas las cuentas del usuario autenticado, ordenadas por nombre (U8 §5.3). */
-    List<Account> findByUserOrderByNameAsc(User user);
+    List<Account> findByUserOrderByEsPrincipalDescNameAsc(User user);
 
-    /** Alias sin orden explícito — mantenido por compatibilidad interna. */
     List<Account> findByUser(User user);
 
-    /** Busca una cuenta por ID y usuario (previene IDOR). */
     Optional<Account> findByIdAndUser(Long id, User user);
 
-    /** Verifica si el usuario ya tiene una cuenta con ese nombre. */
     boolean existsByNameAndUser(String name, User user);
+
+    /** La cuenta principal del usuario — siempre existe exactamente una. */
+    Optional<Account> findByUserAndEsPrincipalTrue(User user);
+
+    long countByUser(User user);
 }

@@ -1,9 +1,11 @@
 package com.aureus.controller;
 
 import com.aureus.dto.budget.PresupuestoDto;
+import com.aureus.model.Account;
 import com.aureus.model.Budget;
 import com.aureus.model.User;
 import com.aureus.repository.CategoryRepository;
+import com.aureus.service.AccountService;
 import com.aureus.service.BudgetService;
 import com.aureus.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -16,14 +18,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
-/**
- * Controlador de Presupuestos.
- *
- * BUG CORREGIDO: el modelo pasaba 'presupuestosConUso' pero el JSP iteraba
- * 'presupuestos'. Ahora se pasan ambos: 'presupuestos' (List<Budget>) y
- * 'porcentajesUso' (List<Double>) en el mismo orden para poder iterar
- * combinados en el JSP mediante índice o un DTO.
- */
 @Controller
 @RequestMapping("/presupuestos")
 @RequiredArgsConstructor
@@ -31,82 +25,79 @@ public class BudgetController {
 
     private final BudgetService      budgetService;
     private final UserService        userService;
+    private final AccountService     accountService;
     private final CategoryRepository categoryRepository;
 
+    /**
+     * Muestra los presupuestos activos.
+     *
+     * Por defecto carga los presupuestos de la cuenta principal automáticamente.
+     * El usuario puede cambiar de cuenta usando el selector.
+     */
     @GetMapping
-    public String listar(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) Long cuentaId,
-            Model model) {
+    public String listar(@AuthenticationPrincipal UserDetails ud,
+                         @RequestParam(required = false) Long cuentaId,
+                         Model model) {
 
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
-        var cuentas  = userService.listarCuentas(usuario);
+        User usuario          = userService.buscarPorEmail(ud.getUsername());
+        List<Account> cuentas = accountService.listar(usuario);
 
-        model.addAttribute("cuentas",       cuentas);
-        model.addAttribute("categorias",    categoryRepository.findAll());
-        model.addAttribute("presupuestoDto", new PresupuestoDto());
-        model.addAttribute("cuentaSeleccionada", cuentaId);
+        // Auto-selección de cuenta principal si no se especificó
+        Account cuentaActual = (cuentaId != null)
+                ? cuentas.stream().filter(c -> c.getId().equals(cuentaId)).findFirst()
+                         .orElse(accountService.obtenerPrincipal(usuario))
+                : accountService.obtenerPrincipal(usuario);
 
-        if (cuentaId != null) {
-            List<Budget> presupuestos = budgetService.listarActivos(cuentaId, usuario);
+        List<Budget> presupuestos = budgetService.listarActivos(cuentaActual.getId(), usuario);
 
-            // FIX: nombre correcto que usa el JSP + porcentajes en el mismo orden
-            model.addAttribute("presupuestos", presupuestos);
-            model.addAttribute("porcentajesUso",
-                presupuestos.stream()
-                    .map(budgetService::calcularPorcentajeUso)
-                    .toList());
-        }
+        model.addAttribute("cuentas",            cuentas);
+        model.addAttribute("cuentaActual",       cuentaActual);
+        model.addAttribute("cuentaSeleccionada", cuentaActual.getId());
+        model.addAttribute("categorias",         categoryRepository.findAll());
+        model.addAttribute("presupuestoDto",     new PresupuestoDto());
+        model.addAttribute("presupuestos",       presupuestos);
+        model.addAttribute("porcentajesUso",
+            presupuestos.stream().map(budgetService::calcularPorcentajeUso).toList());
 
         return "budget/lista";
     }
 
     @PostMapping("/nuevo")
-    public String crear(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @ModelAttribute PresupuestoDto dto,
-            RedirectAttributes redirectAttributes) {
-
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
+    public String crear(@AuthenticationPrincipal UserDetails ud,
+                        @ModelAttribute PresupuestoDto dto,
+                        RedirectAttributes ra) {
+        User usuario = userService.buscarPorEmail(ud.getUsername());
         try {
             budgetService.crear(dto, usuario);
-            redirectAttributes.addFlashAttribute("successMsg", "Presupuesto creado correctamente");
+            ra.addFlashAttribute("successMsg", "Presupuesto creado correctamente");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            ra.addFlashAttribute("errorMsg", e.getMessage());
         }
         return "redirect:/presupuestos?cuentaId=" + dto.getAccountId();
     }
 
     @PostMapping("/{id}/editar")
-    public String editar(
-            @PathVariable Long id,
-            @AuthenticationPrincipal UserDetails userDetails,
-            @ModelAttribute PresupuestoDto dto,
-            RedirectAttributes redirectAttributes) {
-
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
+    public String editar(@PathVariable Long id, @AuthenticationPrincipal UserDetails ud,
+                         @ModelAttribute PresupuestoDto dto, RedirectAttributes ra) {
+        User usuario = userService.buscarPorEmail(ud.getUsername());
         try {
             budgetService.actualizar(id, dto, usuario);
-            redirectAttributes.addFlashAttribute("successMsg", "Presupuesto actualizado");
+            ra.addFlashAttribute("successMsg", "Presupuesto actualizado");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            ra.addFlashAttribute("errorMsg", e.getMessage());
         }
         return "redirect:/presupuestos?cuentaId=" + dto.getAccountId();
     }
 
     @PostMapping("/{id}/eliminar")
-    public String eliminar(
-            @PathVariable Long id,
-            @RequestParam Long cuentaId,
-            @AuthenticationPrincipal UserDetails userDetails,
-            RedirectAttributes redirectAttributes) {
-
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
+    public String eliminar(@PathVariable Long id, @RequestParam Long cuentaId,
+                           @AuthenticationPrincipal UserDetails ud, RedirectAttributes ra) {
+        User usuario = userService.buscarPorEmail(ud.getUsername());
         try {
             budgetService.eliminar(id, cuentaId, usuario);
-            redirectAttributes.addFlashAttribute("successMsg", "Presupuesto eliminado");
+            ra.addFlashAttribute("successMsg", "Presupuesto eliminado");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            ra.addFlashAttribute("errorMsg", e.getMessage());
         }
         return "redirect:/presupuestos?cuentaId=" + cuentaId;
     }

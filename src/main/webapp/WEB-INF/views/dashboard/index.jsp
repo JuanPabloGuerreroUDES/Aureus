@@ -13,58 +13,103 @@
             Buenos días, <c:out value="${usuario.name}"/> 👋
         </h3>
         <p class="text-muted mb-0" style="font-size:.85rem">
-            <c:out value="${resumen != null ? resumen.periodoLabel : ''}"/> · Tu balance va bien este mes
+            Resumen general de tu cuenta principal
         </p>
     </div>
-    <%-- FIX: antes apuntaba a GET /transacciones/nueva que no existe.
-         Ahora abre el modal de nueva transacción directamente. --%>
     <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaQuick"
             style="background:#0D0F14;color:#C8F135;font-weight:600;border-radius:8px;padding:.5rem 1rem">
         <i class="bi bi-plus-lg"></i> Agregar
     </button>
 </div>
 
-<%-- ── KPI ROW ── --%>
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="kpi-card lime">
-            <div class="kpi-label">Balance actual</div>
-            <div class="kpi-value">
-                $<fmt:formatNumber value="${resumen != null ? resumen.balanceNeto : 0}" maxFractionDigits="0"/>
+<%-- ── BALANCE TOTAL (KPI PRINCIPAL) ── --%>
+<div class="card border-0 mb-4"
+     style="background:#0D0F14;border-radius:18px;padding:2rem 2.2rem">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+        <div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.45);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">
+                Balance total acumulado
             </div>
-            <div class="mt-2" style="font-size:.75rem">↑ Actualizado ahora</div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="kpi-card teal">
-            <div class="kpi-label">Ingresos del mes</div>
-            <div class="kpi-value">
-                $<fmt:formatNumber value="${resumen != null ? resumen.totalIngresos : 0}" maxFractionDigits="0"/>
+            <div style="font-size:2.6rem;font-weight:800;color:#C8F135;line-height:1">
+                $<fmt:formatNumber value="${resumen != null ? resumen.balanceTotal : 0}"
+                                   pattern="#,##0" maxFractionDigits="0"/>
+            </div>
+            <div style="font-size:.78rem;margin-top:.5rem;color:rgba(255,255,255,.35)">
+                Todos los ingresos menos todos los gastos desde el inicio
             </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-label">Gastos del mes</div>
-            <div class="kpi-value" style="color:#F25C3A">
-                $<fmt:formatNumber value="${resumen != null ? resumen.totalGastos : 0}" maxFractionDigits="0"/>
+        <div class="d-flex gap-4 flex-wrap">
+            <div>
+                <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">
+                    Total ingresos
+                </div>
+                <div style="font-size:1.1rem;font-weight:700;color:#4ECDC4">
+                    +$<fmt:formatNumber value="${resumen != null ? resumen.totalIngresosHistorico : 0}"
+                                        pattern="#,##0" maxFractionDigits="0"/>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-label">Tasa de ahorro</div>
-            <div class="kpi-value" style="color:#1A9E8C">
-                <fmt:formatNumber value="${resumen != null ? resumen.tasaAhorro : 0}" maxFractionDigits="1"/>%
+            <div>
+                <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">
+                    Total gastos
+                </div>
+                <div style="font-size:1.1rem;font-weight:700;color:#F25C3A">
+                    -$<fmt:formatNumber value="${resumen != null ? resumen.totalGastosHistorico : 0}"
+                                         pattern="#,##0" maxFractionDigits="0"/>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<%-- ── RECENT TRANSACTIONS + GOALS ── --%>
+<%-- ── KPIs DEL MES ACTUAL ── --%>
+<div class="d-flex align-items-center gap-2 mb-3">
+    <div style="width:3px;height:16px;background:#C8F135;border-radius:2px"></div>
+    <span class="fw-bold" style="font-size:.82rem;color:#6E7080;text-transform:uppercase;letter-spacing:.06em">
+        Este mes · <c:out value="${resumen != null ? resumen.periodoLabel : ''}"/>
+    </span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="kpi-card teal">
+            <div class="kpi-label">Ingresos del mes</div>
+            <div class="kpi-value">
+                +$<fmt:formatNumber value="${resumen != null ? resumen.totalIngresos : 0}"
+                                    pattern="#,##0" maxFractionDigits="0"/>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card" style="border-color:#F8C4B8">
+            <div class="kpi-label">Gastos del mes</div>
+            <div class="kpi-value" style="color:#F25C3A">
+                -$<fmt:formatNumber value="${resumen != null ? resumen.totalGastos : 0}"
+                                    pattern="#,##0" maxFractionDigits="0"/>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card lime">
+            <div class="kpi-label">Balance del mes</div>
+            <div class="kpi-value">
+                <c:set var="balanceMes" value="${resumen != null ? resumen.balanceNeto : 0}"/>
+                <span style="color:${balanceMes >= 0 ? '#0D0F14' : '#F25C3A'}">
+                    ${balanceMes >= 0 ? '+' : ''}<fmt:formatNumber value="${balanceMes}"
+                                                                     pattern="#,##0" maxFractionDigits="0"/>
+                </span>
+            </div>
+            <div style="font-size:.72rem;color:#555;margin-top:.25rem">
+                Tasa de ahorro:
+                <strong><fmt:formatNumber value="${resumen != null ? resumen.tasaAhorro : 0}"
+                                          maxFractionDigits="1"/>%</strong>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%-- ── ÚLTIMAS TRANSACCIONES + METAS ── --%>
 <div class="row g-3">
 
-    <%-- Últimas transacciones --%>
     <div class="col-md-7">
         <div class="card border-0 shadow-sm" style="border-radius:12px">
             <div class="card-body p-0">
@@ -89,11 +134,9 @@
                                     <tr>
                                         <td class="ps-3">
                                             <div class="fw-500" style="font-size:.875rem">
-                                                <c:out value="${t.description != null ? t.description : t.type}"/>
+                                                <c:out value="${not empty t.description ? t.description : t.type}"/>
                                             </div>
-                                            <div style="font-size:.72rem;color:#6E7080">
-                                                ${t.date}
-                                            </div>
+                                            <div style="font-size:.72rem;color:#6E7080">${t.date}</div>
                                         </td>
                                         <td>
                                             <span class="badge ${t.type == 'INGRESO' ? 'badge-income' : 'badge-expense'}"
@@ -113,8 +156,9 @@
                                 <tr>
                                     <td colspan="3" class="text-center text-muted py-4" style="font-size:.85rem">
                                         <i class="bi bi-inbox fs-4 d-block mb-2"></i>
-                                        Sin transacciones este mes.
-                                        <a href="/transacciones" style="color:#1A9E8C">Agrega la primera →</a>
+                                        Sin transacciones aún.
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#modalNuevaQuick"
+                                           style="color:#1A9E8C">Agrega la primera →</a>
                                     </td>
                                 </tr>
                             </c:otherwise>
@@ -125,7 +169,6 @@
         </div>
     </div>
 
-    <%-- Metas de ahorro --%>
     <div class="col-md-5">
         <div class="card border-0 shadow-sm" style="border-radius:12px">
             <div class="card-body">
@@ -135,7 +178,6 @@
                         Ver todas →
                     </a>
                 </div>
-
                 <c:choose>
                     <c:when test="${not empty metas}">
                         <c:forEach var="meta" items="${metas}" end="2">
@@ -179,7 +221,7 @@
     </div>
 </div>
 
-<%-- ── MODAL: transacción rápida desde el dashboard ── --%>
+<%-- ── MODAL: transacción rápida ── --%>
 <div class="modal fade" id="modalNuevaQuick" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius:16px;border:none">
@@ -194,11 +236,15 @@
                         <div class="d-flex gap-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="tipo" value="GASTO" checked>
-                                <label class="form-check-label"><i class="bi bi-arrow-up-right text-danger me-1"></i>Gasto</label>
+                                <label class="form-check-label">
+                                    <i class="bi bi-arrow-up-right text-danger me-1"></i>Gasto
+                                </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="tipo" value="INGRESO">
-                                <label class="form-check-label"><i class="bi bi-arrow-down-left text-success me-1"></i>Ingreso</label>
+                                <label class="form-check-label">
+                                    <i class="bi bi-arrow-down-left text-success me-1"></i>Ingreso
+                                </label>
                             </div>
                         </div>
                     </div>

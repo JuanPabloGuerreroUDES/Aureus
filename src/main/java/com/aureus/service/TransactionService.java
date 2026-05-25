@@ -13,5 +13,18 @@ public interface TransactionService {
     void eliminar(Long transaccionId, Long cuentaId, User usuario);
     List<Transaction> listarPorCuenta(Long cuentaId, User usuario);
     List<Transaction> listarPorMes(Long cuentaId, int mes, int anio, User usuario);
+
+    /**
+     * Resumen financiero de un mes específico (ingresos, gastos, balance del período).
+     * Usado en: TransactionController (filtro mensual), ReportesController.
+     */
     ResumenFinancieroDto calcularResumen(Long cuentaId, int mes, int anio, User usuario);
+
+    /**
+     * Resumen financiero completo: incluye el balance acumulado histórico
+     * (balanceTotal = suma de TODAS las transacciones desde el inicio)
+     * más los KPIs del mes actual.
+     * Usado exclusivamente por: DashboardController.
+     */
+    ResumenFinancieroDto calcularResumenCompleto(Long cuentaId, User usuario);
 }

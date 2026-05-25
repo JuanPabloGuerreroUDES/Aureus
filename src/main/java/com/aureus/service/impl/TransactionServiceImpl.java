@@ -25,7 +25,7 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true)  // U8 §7.2
+@Transactional(readOnly = true)
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
@@ -72,14 +72,12 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Transaction> listarPorCuenta(Long cuentaId, User usuario) {
         Account account = obtenerCuentaDelUsuario(cuentaId, usuario);
         return transactionRepository.findByAccountOrderByDateDesc(account);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Transaction> listarPorMes(Long cuentaId, int mes, int anio, User usuario) {
         Account account = obtenerCuentaDelUsuario(cuentaId, usuario);
         YearMonth ym    = YearMonth.of(anio, mes);
@@ -87,17 +85,50 @@ public class TransactionServiceImpl implements TransactionService {
                 account, ym.atDay(1), ym.atEndOfMonth());
     }
 
+    // ── calcularResumen: solo el mes indicado ─────────────────────────────
+
     @Override
-    @Transactional(readOnly = true)
     public ResumenFinancieroDto calcularResumen(Long cuentaId, int mes, int anio, User usuario) {
         Account   account = obtenerCuentaDelUsuario(cuentaId, usuario);
         YearMonth ym      = YearMonth.of(anio, mes);
-        return construirResumen(account, ym);
+        return construirResumenMensual(account, ym);
+    }
+
+    // ── calcularResumenCompleto: balance histórico + KPIs del mes ─────────
+
+    /**
+     * Construye el resumen completo para el Dashboard:
+     *
+     *   balanceTotal   = suma de TODOS los ingresos - suma de TODOS los gastos
+     *                    desde el inicio de la cuenta. Es el "saldo real".
+     *
+     *   totalIngresos  = ingresos del mes actual (KPI secundario)
+     *   totalGastos    = gastos del mes actual   (KPI secundario)
+     *   balanceNeto    = ingresos - gastos del mes (variación mensual)
+     *   tasaAhorro     = (balanceNeto / ingresos_mes) * 100
+     */
+    @Override
+    public ResumenFinancieroDto calcularResumenCompleto(Long cuentaId, User usuario) {
+        Account   account = obtenerCuentaDelUsuario(cuentaId, usuario);
+        YearMonth mesActual = YearMonth.now();
+
+        // Balance acumulado histórico (todas las transacciones)
+        double ingresosTotal = transactionRepository.sumTotalIncomesByAccount(account);
+        double gastosTotal   = transactionRepository.sumTotalExpensesByAccount(account);
+
+        // KPIs del mes actual
+        ResumenFinancieroDto mensual = construirResumenMensual(account, mesActual);
+
+        mensual.setBalanceTotal(ingresosTotal - gastosTotal);
+        mensual.setTotalIngresosHistorico(ingresosTotal);
+        mensual.setTotalGastosHistorico(gastosTotal);
+
+        return mensual;
     }
 
     // ── Helpers privados ──────────────────────────────────────────────────
 
-    private ResumenFinancieroDto construirResumen(Account account, YearMonth ym) {
+    private ResumenFinancieroDto construirResumenMensual(Account account, YearMonth ym) {
         LocalDate inicio = ym.atDay(1);
         LocalDate fin    = ym.atEndOfMonth();
 
@@ -109,7 +140,6 @@ public class TransactionServiceImpl implements TransactionService {
         r.setTotalGastos(gastos);
         r.setBalanceNeto(ingresos - gastos);
         r.setTasaAhorro(ingresos > 0 ? ((ingresos - gastos) / ingresos) * 100.0 : 0.0);
-        // Locale.of() reemplaza el constructor deprecated new Locale(String,String) en Java 19+
         r.setPeriodoLabel(ym.getMonth().getDisplayName(TextStyle.FULL, Locale.of("es", "CO"))
                 + " " + ym.getYear());
         return r;

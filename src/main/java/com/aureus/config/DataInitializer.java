@@ -79,7 +79,9 @@ public class DataInitializer implements CommandLineRunner {
     private Account inicializarCuenta(User usuario) {
         List<Account> existentes = accountRepository.findByUser(usuario);
         if (!existentes.isEmpty()) return existentes.get(0);
-        Account cuenta = accountRepository.save(new Account("Cuenta principal", usuario));
+        Account cuenta = new Account("Cuenta principal", usuario);
+        cuenta.setEsPrincipal(true);
+        cuenta = accountRepository.save(cuenta);
         log.info("Cuenta creada para {}", usuario.getEmail());
         return cuenta;
     }

@@ -13,53 +13,35 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Controlador del Dashboard principal.
- *
- * Muestra el resumen financiero del usuario autenticado:
- *   - KPIs del mes (ingresos, gastos, balance, ahorro)
- *   - Últimas transacciones
- *   - Metas activas
- *   - Alertas de presupuesto
- *
- * @AuthenticationPrincipal inyecta el UserDetails del usuario autenticado
- * directamente en el método, sin necesidad de acceder al SecurityContextHolder.
- */
 @Controller
 @RequestMapping("/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
 
-    private final UserService userService;
+    private final UserService        userService;
     private final TransactionService transactionService;
     private final SavingsGoalService savingsGoalService;
 
     @GetMapping
     public String dashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        // Carga el usuario completo de la BD (UserDetails solo tiene email y rol)
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
-
-        // Acceso a cuentas a través del servicio — respeta la arquitectura por capas (U8 §7.1)
+        User          usuario = userService.buscarPorEmail(userDetails.getUsername());
         List<Account> cuentas = userService.listarCuentas(usuario);
 
         model.addAttribute("usuario", usuario);
         model.addAttribute("cuentas", cuentas);
-        model.addAttribute("metas", savingsGoalService.listarPorUsuario(usuario));
+        model.addAttribute("metas",   savingsGoalService.listarPorUsuario(usuario));
 
-        // Resumen del mes actual
         if (!cuentas.isEmpty()) {
-            LocalDate hoy = LocalDate.now();
+            // calcularResumenCompleto: balance acumulado histórico + KPIs del mes actual
             model.addAttribute("resumen",
-                    transactionService.calcularResumen(
-                            cuentas.get(0).getId(), hoy.getMonthValue(), hoy.getYear(), usuario));
+                    transactionService.calcularResumenCompleto(cuentas.get(0).getId(), usuario));
             model.addAttribute("ultimasTransacciones",
                     transactionService.listarPorCuenta(cuentas.get(0).getId(), usuario)
                             .stream().limit(5).toList());
         }
 
-        return "dashboard/index"; // → /WEB-INF/views/dashboard/index.jsp
+        return "dashboard/index";
     }
 }
