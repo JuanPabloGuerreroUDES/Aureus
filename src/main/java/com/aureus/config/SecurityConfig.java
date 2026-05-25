@@ -217,7 +217,7 @@ public class SecurityConfig {
                     "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                     "img-src 'self' data:; " +
-                    "font-src 'self' https://cdnjs.cloudflare.com; " +
+                    "font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                     "frame-ancestors 'self';"          // reemplaza X-Frame-Options en CSP3
                 ))
             )
