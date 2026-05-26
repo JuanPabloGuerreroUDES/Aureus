@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head th:replace="~{layout/head :: head('Panel Admin')}"></head>
+<body>
+<aside th:replace="~{layout/sidebar :: sidebar('admin')}"></aside>
+<div class="main-content">
+    <h3 class="fw-bold mb-0">Panel de administración</h3>
+    <p class="text-muted mb-4" style="font-size:.85rem">Acceso exclusivo para administradores</p>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <a href="/admin/usuarios" class="text-decoration-none">
+                <div class="kpi-card h-100" style="cursor:pointer">
+                    <div class="kpi-label">Gestión</div>
+                    <div class="kpi-value" style="font-size:2rem;color:#0D0F14"><i class="bi bi-people"></i></div>
+                    <div class="fw-bold mt-2">Usuarios</div>
+                    <div style="font-size:.8rem;color:#6E7080">Ver, activar y desactivar cuentas</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card h-100">
+                <div class="kpi-label">Sistema</div>
+                <div class="kpi-value" style="font-size:2rem;color:#1A9E8C"><i class="bi bi-shield-check"></i></div>
+                <div class="fw-bold mt-2">Seguridad</div>
+                <div style="font-size:.8rem;color:#6E7080">Spring Security 6 · JWT · BCrypt(12)</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <a href="/swagger-ui.html" target="_blank" class="text-decoration-none">
+                <div class="kpi-card h-100" style="cursor:pointer">
+                    <div class="kpi-label">Documentación</div>
+                    <div class="kpi-value" style="font-size:2rem;color:#E8A912"><i class="bi bi-code-square"></i></div>
+                    <div class="fw-bold mt-2">API Docs</div>
+                    <div style="font-size:.8rem;color:#6E7080">Swagger UI — OpenAPI 3</div>
+                </div>
+            </a>
+        </div>
+    </div>
+<div th:replace="~{layout/footer :: footer}"></div>
+</div>
+</body>
+</html>

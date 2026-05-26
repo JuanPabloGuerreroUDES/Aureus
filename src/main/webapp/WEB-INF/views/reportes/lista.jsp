@@ -46,34 +46,78 @@
     </div>
 </div>
 
-<%-- ── KPIs DEL MES ── --%>
+<%-- ── BALANCE TOTAL HISTÓRICO ── --%>
+<c:if test="${not empty resumenTotal}">
+<div class="card border-0 mb-4"
+     style="background:#0D0F14;border-radius:16px;padding:1.4rem 1.8rem">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem">
+                Balance total acumulado de la cuenta
+            </div>
+            <div style="font-size:2.2rem;font-weight:800;color:#C8F135;line-height:1">
+                $<fmt:formatNumber value="${resumenTotal.balanceTotal}" pattern="#,##0" maxFractionDigits="0"/>
+            </div>
+        </div>
+        <div class="d-flex gap-4">
+            <div>
+                <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase">Total ingresos</div>
+                <div style="font-weight:700;color:#4ECDC4">
+                    +$<fmt:formatNumber value="${resumenTotal.totalIngresosHistorico}" pattern="#,##0" maxFractionDigits="0"/>
+                </div>
+            </div>
+            <div>
+                <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase">Total gastos</div>
+                <div style="font-weight:700;color:#F25C3A">
+                    -$<fmt:formatNumber value="${resumenTotal.totalGastosHistorico}" pattern="#,##0" maxFractionDigits="0"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</c:if>
+
+<%-- ── KPIs DEL MES SELECCIONADO ── --%>
 <c:if test="${not empty resumen}">
+<div class="d-flex align-items-center gap-2 mb-3">
+    <div style="width:3px;height:14px;background:#C8F135;border-radius:2px"></div>
+    <span style="font-size:.78rem;color:#6E7080;font-weight:600;text-transform:uppercase;letter-spacing:.06em">
+        Período · <c:out value="${resumen.periodoLabel}"/>
+    </span>
+</div>
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="kpi-card teal">
             <div class="kpi-label">Ingresos</div>
-            <div class="kpi-value">+$<fmt:formatNumber value="${resumen.totalIngresos}" maxFractionDigits="0"/></div>
+            <div class="kpi-value">+$<fmt:formatNumber value="${resumen.totalIngresos}" pattern="#,##0" maxFractionDigits="0"/></div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card" style="border-color:#F8C4B8">
             <div class="kpi-label">Gastos</div>
             <div class="kpi-value" style="color:#F25C3A">
-                -$<fmt:formatNumber value="${resumen.totalGastos}" maxFractionDigits="0"/>
+                -$<fmt:formatNumber value="${resumen.totalGastos}" pattern="#,##0" maxFractionDigits="0"/>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card lime">
-            <div class="kpi-label">Balance</div>
-            <div class="kpi-value">$<fmt:formatNumber value="${resumen.balanceNeto}" maxFractionDigits="0"/></div>
+            <div class="kpi-label">Balance del período</div>
+            <div class="kpi-value" style="color:${resumen.balanceNeto >= 0 ? '#0D0F14' : '#F25C3A'}">
+                ${resumen.balanceNeto >= 0 ? '+' : ''}<fmt:formatNumber value="${resumen.balanceNeto}" pattern="#,##0" maxFractionDigits="0"/>
+            </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="kpi-card">
             <div class="kpi-label">Tasa de ahorro</div>
             <div class="kpi-value" style="color:#1A9E8C">
-                <fmt:formatNumber value="${resumen.tasaAhorro}" maxFractionDigits="1"/>%
+                <c:choose>
+                    <c:when test="${resumen.totalIngresos > 0}">
+                        <fmt:formatNumber value="${resumen.tasaAhorro}" maxFractionDigits="1"/>%
+                    </c:when>
+                    <c:otherwise>—</c:otherwise>
+                </c:choose>
             </div>
         </div>
     </div>

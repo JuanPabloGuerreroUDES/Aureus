@@ -2,6 +2,7 @@ package com.aureus.controller;
 
 import com.aureus.model.Account;
 import com.aureus.model.User;
+import com.aureus.service.AccountService;
 import com.aureus.service.SavingsGoalService;
 import com.aureus.service.TransactionService;
 import com.aureus.service.UserService;
@@ -21,25 +22,27 @@ import java.util.List;
 public class DashboardController {
 
     private final UserService        userService;
+    private final AccountService     accountService;
     private final TransactionService transactionService;
     private final SavingsGoalService savingsGoalService;
 
     @GetMapping
     public String dashboard(@AuthenticationPrincipal UserDetails userDetails, Model model) {
         User          usuario = userService.buscarPorEmail(userDetails.getUsername());
-        List<Account> cuentas = userService.listarCuentas(usuario);
+        List<Account> cuentas = accountService.listar(usuario);
 
         model.addAttribute("usuario", usuario);
         model.addAttribute("cuentas", cuentas);
         model.addAttribute("metas",   savingsGoalService.listarPorUsuario(usuario));
 
         if (!cuentas.isEmpty()) {
-            // calcularResumenCompleto: balance acumulado histórico + KPIs del mes actual
+            // El dashboard siempre muestra la visión GLOBAL:
+            // balance total y KPIs del mes de TODAS las cuentas del usuario.
             model.addAttribute("resumen",
-                    transactionService.calcularResumenCompleto(cuentas.get(0).getId(), usuario));
+                    transactionService.calcularResumenGlobal(usuario));
+            // Últimas 5 transacciones de TODAS las cuentas
             model.addAttribute("ultimasTransacciones",
-                    transactionService.listarPorCuenta(cuentas.get(0).getId(), usuario)
-                            .stream().limit(5).toList());
+                    transactionService.listarRecientesPorUsuario(usuario, 5));
         }
 
         return "dashboard/index";

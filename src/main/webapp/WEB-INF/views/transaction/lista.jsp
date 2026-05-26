@@ -10,6 +10,12 @@
         <h3 class="fw-bold mb-0">Transacciones</h3>
         <p class="text-muted mb-0" style="font-size:.85rem">
             <c:choose>
+                <c:when test="${esPrincipal and modoFiltrado}">
+                    Todas las cuentas · <strong><c:out value="${resumen.periodoLabel}"/></strong>
+                </c:when>
+                <c:when test="${esPrincipal}">
+                    Consolidado de todas tus cuentas
+                </c:when>
                 <c:when test="${modoFiltrado}">
                     Mostrando · <strong><c:out value="${resumen.periodoLabel}"/></strong>
                 </c:when>
@@ -29,7 +35,7 @@
         <div class="card border-0 shadow-sm" style="border-radius:14px;background:#0D0F14;padding:1.2rem 1.4rem">
             <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Balance total</div>
             <div class="fw-bold" style="font-size:1.5rem;color:#C8F135">
-                $<fmt:formatNumber value="${resumen != null ? resumen.balanceTotal : 0}" pattern="#,##0" maxFractionDigits="0"/>
+                $<fmt:formatNumber value="${resumenTotal != null ? resumenTotal.balanceTotal : 0}" pattern="#,##0" maxFractionDigits="0"/>
             </div>
         </div>
     </div>

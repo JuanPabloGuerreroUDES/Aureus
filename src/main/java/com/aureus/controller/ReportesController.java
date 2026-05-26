@@ -4,6 +4,7 @@ import com.aureus.dto.report.ResumenFinancieroDto;
 import com.aureus.model.Account;
 import com.aureus.model.Transaction;
 import com.aureus.model.User;
+import com.aureus.service.AccountService;
 import com.aureus.service.TransactionService;
 import com.aureus.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,17 +21,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.time.YearMonth;
 import java.util.*;
 
-/**
- * Controlador de Reportes — implementa la sección de análisis financiero.
- *
- * NUEVO: antes este controlador no existía, causando un 404 permanente
- * cuando el usuario hacía clic en "Reportes" en el sidebar.
- *
- * Genera:
- *   - Resumen de los últimos 6 meses (ingresos, gastos, balance)
- *   - Desglose por categoría del mes seleccionado
- *   - JSON para Chart.js (renderizado en el JSP)
- */
 @Controller
 @RequestMapping("/reportes")
 @RequiredArgsConstructor
@@ -38,8 +28,15 @@ import java.util.*;
 public class ReportesController {
 
     private final UserService        userService;
+    private final AccountService     accountService;
     private final TransactionService transactionService;
 
+    /**
+     * Regla de datos según cuenta seleccionada (misma que TransactionController):
+     *
+     *   Cuenta PRINCIPAL → gráficos y KPIs de TODAS las cuentas del usuario.
+     *   Cuenta adicional → solo los datos de esa cuenta.
+     */
     @GetMapping
     public String reporte(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -47,71 +44,78 @@ public class ReportesController {
             @RequestParam(required = false) String periodo,
             Model model) {
 
-        User usuario = userService.buscarPorEmail(userDetails.getUsername());
-        List<Account> cuentas = userService.listarCuentas(usuario);
+        User          usuario = userService.buscarPorEmail(userDetails.getUsername());
+        List<Account> cuentas = accountService.listar(usuario);
 
         model.addAttribute("cuentas", cuentas);
+        if (cuentas.isEmpty()) return "reportes/lista";
 
-        if (cuentas.isEmpty()) {
-            return "reportes/lista";
-        }
-
-        // Cuenta a analizar (primera por defecto)
         Account cuentaActual = (cuentaId != null)
-                ? cuentas.stream().filter(c -> c.getId().equals(cuentaId)).findFirst().orElse(cuentas.get(0))
-                : cuentas.get(0);
+                ? cuentas.stream().filter(c -> c.getId().equals(cuentaId)).findFirst()
+                         .orElse(accountService.obtenerPrincipal(usuario))
+                : accountService.obtenerPrincipal(usuario);
+
+        boolean esPrincipal = cuentaActual.isEsPrincipal();
 
         model.addAttribute("cuentaSeleccionada", cuentaActual.getId());
 
-        // Periodo seleccionado (mes actual por defecto)
         YearMonth ym = (periodo != null && !periodo.isBlank())
                 ? YearMonth.parse(periodo)
                 : YearMonth.now();
         model.addAttribute("periodoActual", ym.toString());
 
-        // ── Últimos 6 meses para gráfico de barras ────────────────────────
-        List<String>  etiquetas    = new ArrayList<>();
-        List<Double>  ingresosMes  = new ArrayList<>();
-        List<Double>  gastosMes    = new ArrayList<>();
-        List<Double>  balanceMes   = new ArrayList<>();
+        // ── Balance total histórico ────────────────────────────────────────
+        // Global si es cuenta principal, de la cuenta si es adicional
+        ResumenFinancieroDto resumenTotal = esPrincipal
+                ? transactionService.calcularResumenGlobal(usuario)
+                : transactionService.calcularResumenCompleto(cuentaActual.getId(), usuario);
+        model.addAttribute("resumenTotal", resumenTotal);
+
+        // ── KPIs del mes seleccionado ─────────────────────────────────────
+        ResumenFinancieroDto resumenPeriodo = esPrincipal
+                ? transactionService.calcularResumenMensualGlobal(usuario, ym.getMonthValue(), ym.getYear())
+                : transactionService.calcularResumen(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario);
+        model.addAttribute("resumen", resumenPeriodo);
+
+        // ── Últimos 6 meses para el gráfico de barras ─────────────────────
+        List<String> etiquetas   = new ArrayList<>();
+        List<Double> ingresosMes = new ArrayList<>();
+        List<Double> gastosMes   = new ArrayList<>();
+        List<Double> balanceMes  = new ArrayList<>();
 
         for (int i = 5; i >= 0; i--) {
             YearMonth mes = YearMonth.now().minusMonths(i);
-            ResumenFinancieroDto r = transactionService.calcularResumen(
-                    cuentaActual.getId(), mes.getMonthValue(), mes.getYear(), usuario);
+            ResumenFinancieroDto r = esPrincipal
+                    ? transactionService.calcularResumenMensualGlobal(usuario, mes.getMonthValue(), mes.getYear())
+                    : transactionService.calcularResumen(cuentaActual.getId(), mes.getMonthValue(), mes.getYear(), usuario);
             etiquetas.add(r.getPeriodoLabel());
             ingresosMes.add(r.getTotalIngresos());
             gastosMes.add(r.getTotalGastos());
             balanceMes.add(r.getBalanceNeto());
         }
 
-        // ── Resumen del mes seleccionado ──────────────────────────────────
-        ResumenFinancieroDto resumenActual = transactionService.calcularResumen(
-                cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario);
-        model.addAttribute("resumen", resumenActual);
-
-        // ── Desglose por categoría del mes seleccionado ───────────────────
-        List<Transaction> txMes = transactionService.listarPorMes(
-                cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario);
+        // ── Gastos por categoría del mes seleccionado ─────────────────────
+        List<Transaction> txMes = esPrincipal
+                ? transactionService.listarTodasPorUsuario(usuario).stream()
+                    .filter(t -> YearMonth.from(t.getDate()).equals(ym)).toList()
+                : transactionService.listarPorMes(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario);
 
         Map<String, Double> gastosPorCategoria = new LinkedHashMap<>();
         for (Transaction t : txMes) {
-            // Solo gastos
-            if ("GASTO".equals(t.getType()) || t instanceof com.aureus.model.Expense) {
+            if (t instanceof com.aureus.model.Expense) {
                 String cat = (t.getCategory() != null) ? t.getCategory().getName() : "Sin categoría";
                 gastosPorCategoria.merge(cat, t.getAmount().doubleValue(), Double::sum);
             }
         }
 
-        // Serializar a JSON para Chart.js
         try {
             ObjectMapper om = new ObjectMapper();
-            model.addAttribute("chartEtiquetasJson",   om.writeValueAsString(etiquetas));
-            model.addAttribute("chartIngresosJson",    om.writeValueAsString(ingresosMes));
-            model.addAttribute("chartGastosJson",      om.writeValueAsString(gastosMes));
-            model.addAttribute("chartBalanceJson",     om.writeValueAsString(balanceMes));
-            model.addAttribute("chartCatLabelsJson",   om.writeValueAsString(new ArrayList<>(gastosPorCategoria.keySet())));
-            model.addAttribute("chartCatValoresJson",  om.writeValueAsString(new ArrayList<>(gastosPorCategoria.values())));
+            model.addAttribute("chartEtiquetasJson",  om.writeValueAsString(etiquetas));
+            model.addAttribute("chartIngresosJson",   om.writeValueAsString(ingresosMes));
+            model.addAttribute("chartGastosJson",     om.writeValueAsString(gastosMes));
+            model.addAttribute("chartBalanceJson",    om.writeValueAsString(balanceMes));
+            model.addAttribute("chartCatLabelsJson",  om.writeValueAsString(new ArrayList<>(gastosPorCategoria.keySet())));
+            model.addAttribute("chartCatValoresJson", om.writeValueAsString(new ArrayList<>(gastosPorCategoria.values())));
         } catch (Exception e) {
             log.error("Error serializando datos para Chart.js", e);
         }

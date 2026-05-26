@@ -1,5 +1,6 @@
 package com.aureus.controller;
 
+import com.aureus.dto.report.ResumenFinancieroDto;
 import com.aureus.dto.transaction.TransaccionDto;
 import com.aureus.model.Account;
 import com.aureus.model.User;
@@ -17,7 +18,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -32,17 +32,17 @@ public class TransactionController {
     private final CategoryRepository categoryRepository;
 
     /**
-     * Lista de transacciones.
+     * Regla de datos según cuenta seleccionada:
      *
-     * Comportamiento por defecto (sin parámetros):
-     *   - Cuenta: principal del usuario (automático, sin selección requerida)
-     *   - Período: TODAS las transacciones (sin filtro de mes)
+     *   Cuenta PRINCIPAL → datos GLOBALES (todas las cuentas del usuario).
+     *     • resumenTotal = calcularResumenGlobal()
+     *     • transacciones = listarTodasPorUsuario()
+     *     • Al filtrar por mes → calcularResumenMensualGlobal()
      *
-     * El usuario puede optar por filtrar por mes usando el selector de período.
-     * Si elige otro mes, la URL incluye ?periodo=YYYY-MM y ?cuentaId=X.
-     *
-     * @param cuentaId  opcional — si no viene, se usa la cuenta principal
-     * @param periodo   opcional — formato YYYY-MM; si no viene, se muestran todas
+     *   Cuenta adicional → datos SOLO de esa cuenta.
+     *     • resumenTotal = calcularResumenCompleto(cuentaId)
+     *     • transacciones = listarPorCuenta(cuentaId)
+     *     • Al filtrar por mes → calcularResumen(cuentaId, mes, anio)
      */
     @GetMapping
     public String listar(@AuthenticationPrincipal UserDetails ud,
@@ -50,37 +50,53 @@ public class TransactionController {
                          @RequestParam(required = false) String periodo,
                          Model model) {
 
-        User usuario          = userService.buscarPorEmail(ud.getUsername());
+        User          usuario = userService.buscarPorEmail(ud.getUsername());
         List<Account> cuentas = accountService.listar(usuario);
 
-        // Auto-selección de cuenta principal si no se especificó
         Account cuentaActual = (cuentaId != null)
                 ? cuentas.stream().filter(c -> c.getId().equals(cuentaId)).findFirst()
                          .orElse(accountService.obtenerPrincipal(usuario))
                 : accountService.obtenerPrincipal(usuario);
+
+        boolean esPrincipal = cuentaActual.isEsPrincipal();
 
         model.addAttribute("cuentas",            cuentas);
         model.addAttribute("categorias",         categoryRepository.findAll());
         model.addAttribute("transaccionDto",     new TransaccionDto());
         model.addAttribute("cuentaSeleccionada", cuentaActual.getId());
         model.addAttribute("periodoActual",      periodo != null ? periodo : "");
+        model.addAttribute("esPrincipal",        esPrincipal);
+
+        // Balance total acumulado: global si es principal, de la cuenta si es adicional
+        ResumenFinancieroDto resumenTotal = esPrincipal
+                ? transactionService.calcularResumenGlobal(usuario)
+                : transactionService.calcularResumenCompleto(cuentaActual.getId(), usuario);
+        model.addAttribute("resumenTotal", resumenTotal);
 
         if (periodo != null && !periodo.isBlank()) {
-            // Modo filtrado por mes
             try {
                 YearMonth ym = YearMonth.parse(periodo);
-                model.addAttribute("transacciones",
-                    transactionService.listarPorMes(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario));
-                model.addAttribute("resumen",
-                    transactionService.calcularResumen(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario));
+                // KPIs del período filtrado: globales o por cuenta
+                ResumenFinancieroDto resumenPeriodo = esPrincipal
+                        ? transactionService.calcularResumenMensualGlobal(usuario, ym.getMonthValue(), ym.getYear())
+                        : transactionService.calcularResumen(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario);
+
+                // Transacciones del período filtrado
+                model.addAttribute("transacciones", esPrincipal
+                        ? transactionService.listarTodasPorUsuario(usuario).stream()
+                            .filter(t -> {
+                                YearMonth txMes = YearMonth.from(t.getDate());
+                                return txMes.equals(ym);
+                            }).toList()
+                        : transactionService.listarPorMes(cuentaActual.getId(), ym.getMonthValue(), ym.getYear(), usuario));
+
+                model.addAttribute("resumen",      resumenPeriodo);
                 model.addAttribute("modoFiltrado", true);
             } catch (Exception ignored) {
-                // Si el periodo tiene mal formato, mostrar todas
-                cargarTodasLasTransacciones(cuentaActual, usuario, model);
+                cargarTodas(cuentaActual, esPrincipal, usuario, model, resumenTotal);
             }
         } else {
-            // Modo completo: todas las transacciones + balance total
-            cargarTodasLasTransacciones(cuentaActual, usuario, model);
+            cargarTodas(cuentaActual, esPrincipal, usuario, model, resumenTotal);
         }
 
         return "transaction/lista";
@@ -91,10 +107,7 @@ public class TransactionController {
                             @Valid @ModelAttribute("transaccionDto") TransaccionDto dto,
                             BindingResult result, RedirectAttributes ra) {
         if (result.hasErrors()) {
-            ra.addFlashAttribute("errorMsg", "Datos inválidos: " +
-                result.getFieldErrors().stream()
-                    .map(e -> e.getField() + " " + e.getDefaultMessage())
-                    .reduce("", (a, b) -> a + "; " + b));
+            ra.addFlashAttribute("errorMsg", "Datos inválidos");
             return "redirect:/transacciones?cuentaId=" + dto.getAccountId();
         }
         User usuario = userService.buscarPorEmail(ud.getUsername());
@@ -125,11 +138,12 @@ public class TransactionController {
         return "redirect:/transacciones?cuentaId=" + cuentaId;
     }
 
-    private void cargarTodasLasTransacciones(Account cuenta, User usuario, Model model) {
-        model.addAttribute("transacciones",
-            transactionService.listarPorCuenta(cuenta.getId(), usuario));
-        model.addAttribute("resumen",
-            transactionService.calcularResumenCompleto(cuenta.getId(), usuario));
-        model.addAttribute("modoFiltrado", false);
+    private void cargarTodas(Account cuenta, boolean esPrincipal, User usuario,
+                              Model model, ResumenFinancieroDto resumenTotal) {
+        model.addAttribute("transacciones", esPrincipal
+                ? transactionService.listarTodasPorUsuario(usuario)
+                : transactionService.listarPorCuenta(cuenta.getId(), usuario));
+        model.addAttribute("resumen",       resumenTotal);
+        model.addAttribute("modoFiltrado",  false);
     }
 }

@@ -34,6 +34,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final BudgetService         budgetService;
     private final TransactionFactory    transactionFactory;
 
+    // ── Escrituras ────────────────────────────────────────────────────────
+
     @Override
     @Transactional
     public Transaction registrar(TransaccionDto dto, User usuario) {
@@ -52,9 +54,8 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public Transaction editar(Long transaccionId, TransaccionDto dto, User usuario) {
-        Account account = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
-        Transaction t   = obtenerTransaccionDeAccount(transaccionId, account);
-
+        Account     account = obtenerCuentaDelUsuario(dto.getAccountId(), usuario);
+        Transaction t       = obtenerTransaccionDeAccount(transaccionId, account);
         t.setAmount(dto.getAmount());
         t.setDate(LocalDate.parse(dto.getDate()));
         t.setDescription(dto.getDescription());
@@ -71,6 +72,8 @@ public class TransactionServiceImpl implements TransactionService {
         log.info("Transacción id={} eliminada", transaccionId);
     }
 
+    // ── Por cuenta específica ─────────────────────────────────────────────
+
     @Override
     public List<Transaction> listarPorCuenta(Long cuentaId, User usuario) {
         Account account = obtenerCuentaDelUsuario(cuentaId, usuario);
@@ -79,61 +82,125 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public List<Transaction> listarPorMes(Long cuentaId, int mes, int anio, User usuario) {
-        Account account = obtenerCuentaDelUsuario(cuentaId, usuario);
-        YearMonth ym    = YearMonth.of(anio, mes);
+        Account   account = obtenerCuentaDelUsuario(cuentaId, usuario);
+        YearMonth ym      = YearMonth.of(anio, mes);
         return transactionRepository.findByAccountAndDateBetweenOrderByDateDesc(
                 account, ym.atDay(1), ym.atEndOfMonth());
     }
-
-    // ── calcularResumen: solo el mes indicado ─────────────────────────────
 
     @Override
     public ResumenFinancieroDto calcularResumen(Long cuentaId, int mes, int anio, User usuario) {
         Account   account = obtenerCuentaDelUsuario(cuentaId, usuario);
         YearMonth ym      = YearMonth.of(anio, mes);
-        return construirResumenMensual(account, ym);
+        return construirResumenMensualPorCuenta(account, ym);
     }
 
-    // ── calcularResumenCompleto: balance histórico + KPIs del mes ─────────
-
-    /**
-     * Construye el resumen completo para el Dashboard:
-     *
-     *   balanceTotal   = suma de TODOS los ingresos - suma de TODOS los gastos
-     *                    desde el inicio de la cuenta. Es el "saldo real".
-     *
-     *   totalIngresos  = ingresos del mes actual (KPI secundario)
-     *   totalGastos    = gastos del mes actual   (KPI secundario)
-     *   balanceNeto    = ingresos - gastos del mes (variación mensual)
-     *   tasaAhorro     = (balanceNeto / ingresos_mes) * 100
-     */
     @Override
     public ResumenFinancieroDto calcularResumenCompleto(Long cuentaId, User usuario) {
-        Account   account = obtenerCuentaDelUsuario(cuentaId, usuario);
-        YearMonth mesActual = YearMonth.now();
+        Account   account    = obtenerCuentaDelUsuario(cuentaId, usuario);
+        YearMonth mesActual  = YearMonth.now();
 
-        // Balance acumulado histórico (todas las transacciones)
         double ingresosTotal = transactionRepository.sumTotalIncomesByAccount(account);
         double gastosTotal   = transactionRepository.sumTotalExpensesByAccount(account);
 
-        // KPIs del mes actual
-        ResumenFinancieroDto mensual = construirResumenMensual(account, mesActual);
-
-        mensual.setBalanceTotal(ingresosTotal - gastosTotal);
-        mensual.setTotalIngresosHistorico(ingresosTotal);
-        mensual.setTotalGastosHistorico(gastosTotal);
-
-        return mensual;
+        ResumenFinancieroDto r = construirResumenMensualPorCuenta(account, mesActual);
+        r.setBalanceTotal(ingresosTotal - gastosTotal);
+        r.setTotalIngresosHistorico(ingresosTotal);
+        r.setTotalGastosHistorico(gastosTotal);
+        return r;
     }
 
-    // ── Helpers privados ──────────────────────────────────────────────────
+    // ── Global: TODAS las cuentas del usuario ────────────────────────────
 
-    private ResumenFinancieroDto construirResumenMensual(Account account, YearMonth ym) {
+    @Override
+    public List<Transaction> listarRecientesPorUsuario(User usuario, int limite) {
+        return transactionRepository.findByUserOrderByDateDesc(usuario)
+                .stream().limit(limite).toList();
+    }
+
+    /**
+     * Agrega ingresos y gastos de TODAS las cuentas del usuario.
+     *
+     * Esto es lo que el Dashboard muestra: la situación financiera TOTAL,
+     * sin importar en qué cuenta está registrada cada transacción.
+     *
+     *   balanceTotal          = ∑ ingresos históricos - ∑ gastos históricos (todas las cuentas)
+     *   totalIngresosHistorico = ∑ todos los ingresos (todas las cuentas)
+     *   totalGastosHistorico   = ∑ todos los gastos   (todas las cuentas)
+     *   totalIngresos          = ingresos del mes actual (todas las cuentas)
+     *   totalGastos            = gastos del mes actual   (todas las cuentas)
+     *   balanceNeto            = ingresos - gastos del mes actual
+     *   tasaAhorro             = balanceNeto / totalIngresos * 100
+     */
+    @Override
+    public ResumenFinancieroDto calcularResumenGlobal(User usuario) {
+        YearMonth mesActual = YearMonth.now();
+        LocalDate inicio    = mesActual.atDay(1);
+        LocalDate fin       = mesActual.atEndOfMonth();
+
+        // Totales históricos (todas las cuentas)
+        double ingresosTotal = transactionRepository.sumTotalIncomesByUser(usuario);
+        double gastosTotal   = transactionRepository.sumTotalExpensesByUser(usuario);
+
+        // KPIs del mes actual (todas las cuentas)
+        double ingresosMes = transactionRepository.sumIncomesByUserAndPeriod(usuario, inicio, fin);
+        double gastosMes   = transactionRepository.sumExpensesByUserAndPeriod(usuario, inicio, fin);
+
+        String label = mesActual.getMonth()
+                .getDisplayName(TextStyle.FULL, Locale.of("es", "CO"))
+                + " " + mesActual.getYear();
+
+        ResumenFinancieroDto r = new ResumenFinancieroDto();
+        r.setTotalIngresosHistorico(ingresosTotal);
+        r.setTotalGastosHistorico(gastosTotal);
+        r.setBalanceTotal(ingresosTotal - gastosTotal);
+        r.setTotalIngresos(ingresosMes);
+        r.setTotalGastos(gastosMes);
+        r.setBalanceNeto(ingresosMes - gastosMes);
+        r.setTasaAhorro(ingresosMes > 0 ? ((ingresosMes - gastosMes) / ingresosMes) * 100.0 : 0.0);
+        r.setPeriodoLabel(label);
+        return r;
+    }
+
+
+    @Override
+    public List<Transaction> listarTodasPorUsuario(User usuario) {
+        return transactionRepository.findByUserOrderByDateDesc(usuario);
+    }
+
+    @Override
+    public ResumenFinancieroDto calcularResumenMensualGlobal(User usuario, int mes, int anio) {
+        YearMonth ym     = YearMonth.of(anio, mes);
         LocalDate inicio = ym.atDay(1);
         LocalDate fin    = ym.atEndOfMonth();
 
-        double ingresos = transactionRepository.sumIncomesByAccountAndPeriod(account, inicio, fin);
-        double gastos   = transactionRepository.sumExpensesByAccountAndPeriod(account, inicio, fin);
+        double ingresosTotal = transactionRepository.sumTotalIncomesByUser(usuario);
+        double gastosTotal   = transactionRepository.sumTotalExpensesByUser(usuario);
+        double ingresosMes   = transactionRepository.sumIncomesByUserAndPeriod(usuario, inicio, fin);
+        double gastosMes     = transactionRepository.sumExpensesByUserAndPeriod(usuario, inicio, fin);
+
+        String label = ym.getMonth().getDisplayName(TextStyle.FULL, Locale.of("es", "CO"))
+                + " " + ym.getYear();
+
+        ResumenFinancieroDto r = new ResumenFinancieroDto();
+        r.setTotalIngresosHistorico(ingresosTotal);
+        r.setTotalGastosHistorico(gastosTotal);
+        r.setBalanceTotal(ingresosTotal - gastosTotal);
+        r.setTotalIngresos(ingresosMes);
+        r.setTotalGastos(gastosMes);
+        r.setBalanceNeto(ingresosMes - gastosMes);
+        r.setTasaAhorro(ingresosMes > 0 ? ((ingresosMes - gastosMes) / ingresosMes) * 100.0 : 0.0);
+        r.setPeriodoLabel(label);
+        return r;
+    }
+
+        // ── Helpers privados ──────────────────────────────────────────────────
+
+    private ResumenFinancieroDto construirResumenMensualPorCuenta(Account account, YearMonth ym) {
+        LocalDate inicio  = ym.atDay(1);
+        LocalDate fin     = ym.atEndOfMonth();
+        double ingresos   = transactionRepository.sumIncomesByAccountAndPeriod(account, inicio, fin);
+        double gastos     = transactionRepository.sumExpensesByAccountAndPeriod(account, inicio, fin);
 
         ResumenFinancieroDto r = new ResumenFinancieroDto();
         r.setTotalIngresos(ingresos);
@@ -146,15 +213,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private void marcarAlertaPresupuesto(Transaction t, Account account,
-                                         Category category, TransaccionDto dto) {
+                                          Category category, TransaccionDto dto) {
         if (!(t instanceof Expense gasto) || category == null) return;
         boolean supera = budgetService.verificarSiSuperaPresupuesto(
                 account, category, LocalDate.parse(dto.getDate()), dto.getAmount());
         gasto.setExceedsBudget(supera);
-        if (supera) {
-            log.warn("Gasto supera presupuesto — cuenta={}, categoría={}, monto={}",
-                    account.getId(), category.getName(), dto.getAmount());
-        }
+        if (supera) log.warn("Gasto supera presupuesto — cuenta={}, cat={}, monto={}",
+                account.getId(), category.getName(), dto.getAmount());
     }
 
     private Account obtenerCuentaDelUsuario(Long cuentaId, User usuario) {

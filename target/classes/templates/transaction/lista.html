@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head th:replace="~{layout/head :: head('Transacciones')}"></head>
+<body>
+<aside th:replace="~{layout/sidebar :: sidebar('transacciones')}"></aside>
+<div class="main-content">
+
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show mb-3">
+        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mb-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h3 class="fw-bold mb-0">Transacciones</h3>
+            <p class="text-muted mb-0" style="font-size:.85rem">
+                <th:block th:if="${esPrincipal and modoFiltrado}">Todas las cuentas · <strong th:text="${resumen?.periodoLabel}"></strong></th:block>
+                <th:block th:if="${esPrincipal and !modoFiltrado}">Consolidado de todas tus cuentas</th:block>
+                <th:block th:if="${!esPrincipal and modoFiltrado}">Mostrando · <strong th:text="${resumen?.periodoLabel}"></strong></th:block>
+                <th:block th:if="${!esPrincipal and !modoFiltrado}">Historial completo de la cuenta</th:block>
+            </p>
+        </div>
+        <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modalNueva"
+                style="background:#0D0F14;color:#C8F135;font-weight:600;border-radius:8px;padding:.5rem 1rem">
+            <i class="bi bi-plus-lg"></i> Nueva transacción
+        </button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-radius:14px;background:#0D0F14;padding:1.2rem 1.4rem">
+                <div style="font-size:.68rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Balance total</div>
+                <div class="fw-bold" style="font-size:1.5rem;color:#C8F135"
+                     th:text="${'$' + #numbers.formatInteger(resumenTotal != null ? resumenTotal.balanceTotal : 0, 1, 'COMMA')}">$0</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card teal">
+                <div class="kpi-label" th:text="${modoFiltrado ? 'Ingresos del período' : 'Ingresos del mes'}">Ingresos</div>
+                <div class="kpi-value" th:text="${'+$' + #numbers.formatInteger(resumen != null ? resumen.totalIngresos : 0, 1, 'COMMA')}">+$0</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card" style="border-color:#F8C4B8">
+                <div class="kpi-label" th:text="${modoFiltrado ? 'Gastos del período' : 'Gastos del mes'}">Gastos</div>
+                <div class="kpi-value" style="color:#F25C3A"
+                     th:text="${'-$' + #numbers.formatInteger(resumen != null ? resumen.totalGastos : 0, 1, 'COMMA')}">-$0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros: th:action no necesita CSRF en GET -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:12px">
+        <div class="card-body py-3">
+            <form method="get" action="/transacciones" class="d-flex gap-2 align-items-center flex-wrap">
+                <select name="cuentaId" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                    <option th:each="c : ${cuentas}" th:value="${c.id}"
+                            th:selected="${c.id == cuentaSeleccionada}"
+                            th:text="${(not #strings.isEmpty(c.icono) ? c.icono : '🏦') + ' ' + c.name + (c.esPrincipal ? ' ★' : '')}"></option>
+                </select>
+                <input type="month" name="periodo" class="form-control form-control-sm" style="width:auto"
+                       th:value="${periodoActual}"/>
+                <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-funnel"></i> Filtrar mes</button>
+                <a th:if="${modoFiltrado}" th:href="@{/transacciones(cuentaId=${cuentaSeleccionada})}"
+                   class="btn btn-sm btn-link text-muted p-0"><i class="bi bi-x-circle me-1"></i>Ver todo</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card border-0 shadow-sm" style="border-radius:12px">
+        <div class="card-body p-0">
+            <table class="table table-aureus table-hover mb-0">
+                <thead><tr>
+                    <th class="ps-3">Fecha</th><th>Descripción</th><th>Categoría</th>
+                    <th class="text-end">Monto</th><th class="text-center pe-3">Acciones</th>
+                </tr></thead>
+                <tbody>
+                    <tr th:if="${#lists.isEmpty(transacciones)}">
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                            <th:block th:if="${modoFiltrado}">
+                                No hay transacciones en este período.
+                                <a th:href="@{/transacciones(cuentaId=${cuentaSeleccionada})}" style="color:#1A9E8C">Ver todo →</a>
+                            </th:block>
+                            <th:block th:unless="${modoFiltrado}">
+                                Aún no hay transacciones.
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#modalNueva" style="color:#1A9E8C">Agrega la primera →</a>
+                            </th:block>
+                        </td>
+                    </tr>
+                    <tr th:each="t : ${transacciones}">
+                        <td class="ps-3" style="color:#6E7080;font-size:.8rem;white-space:nowrap" th:text="${t.date}"></td>
+                        <td><div class="fw-500" style="font-size:.875rem"
+                                 th:text="${not #strings.isEmpty(t.description) ? t.description : t.type}">—</div></td>
+                        <td>
+                            <span th:class="${t.type == 'INGRESO' ? 'badge badge-income' : 'badge badge-expense'}"
+                                  style="border-radius:100px;font-size:.72rem"
+                                  th:text="${t.category != null ? t.category.name : '—'}">—</span>
+                        </td>
+                        <td th:class="${t.type == 'INGRESO' ? 'text-end fw-500 text-success' : 'text-end fw-500 text-danger'}"
+                            th:text="${(t.type == 'INGRESO' ? '+' : '-') + '$' + #numbers.formatInteger(t.amount, 1, 'COMMA')}">$0</td>
+                        <td class="text-center pe-3">
+                            <!--
+                              th:action incluye el CSRF automáticamente.
+                              No se necesita <input type="hidden" name="_csrf"...> (U9 §6.1).
+                            -->
+                            <form th:action="@{/transacciones/{id}/eliminar(id=${t.id})}" method="post"
+                                  class="d-inline" onsubmit="return confirm('¿Eliminar esta transacción?')">
+                                <input type="hidden" name="cuentaId" th:value="${cuentaSeleccionada}"/>
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Eliminar">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal nueva transacción -->
+    <div class="modal fade" id="modalNueva" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content" style="border-radius:16px;border:none">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Nueva transacción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form th:action="@{/transacciones/nueva}" method="post">
+                    <div class="mb-3">
+                        <div class="d-flex gap-3">
+                            <div class="form-check"><input class="form-check-input" type="radio" name="tipo" id="tipoG" value="GASTO" checked/><label class="form-check-label" for="tipoG"><i class="bi bi-arrow-up-right text-danger me-1"></i>Gasto</label></div>
+                            <div class="form-check"><input class="form-check-input" type="radio" name="tipo" id="tipoI" value="INGRESO"/><label class="form-check-label" for="tipoI"><i class="bi bi-arrow-down-left text-success me-1"></i>Ingreso</label></div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><label class="form-label" style="font-size:.82rem">Monto ($)</label><input type="number" name="amount" class="form-control form-control-sm" step="0.01" min="0.01" required placeholder="0.00"/></div>
+                        <div class="col-6"><label class="form-label" style="font-size:.82rem">Fecha</label><input type="date" name="date" class="form-control form-control-sm" required/></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label" style="font-size:.82rem">Descripción</label><input type="text" name="description" class="form-control form-control-sm" placeholder="Ej. Supermercado" maxlength="255"/></div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Categoría</label>
+                            <select name="categoryId" class="form-select form-select-sm">
+                                <option value="">Sin categoría</option>
+                                <option th:each="cat : ${categorias}" th:value="${cat.id}" th:text="${cat.name}"></option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Cuenta</label>
+                            <select name="accountId" class="form-select form-select-sm" required>
+                                <option th:each="c : ${cuentas}" th:value="${c.id}"
+                                        th:selected="${c.id == cuentaSeleccionada}"
+                                        th:text="${c.name}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn w-100 fw-bold" style="background:#0D0F14;color:#C8F135;border-radius:8px">
+                        <i class="bi bi-check-lg me-1"></i>Registrar transacción
+                    </button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+</div>
+</body>
+</html>

@@ -1,4 +1,4 @@
-package com.aureus.controller.advice;
+package com.aureus.exception;
 
 import com.aureus.dto.error.ApiError;
 import com.aureus.exception.*;

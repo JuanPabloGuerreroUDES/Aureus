@@ -19,13 +19,12 @@
     <packaging>war</packaging>
 
     <name>Aureus — Simulador de Presupuesto Personal</name>
-    <description>Simulador de Presupuesto Personal — Spring Boot 3, Spring Security 6, JPA, JSP</description>
+    <description>Spring Boot 3, Spring Security 6, Thymeleaf, JPA</description>
 
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jacoco.version>0.8.11</jacoco.version>
-        <!-- Versiones Selenium (U10 §5.1) -->
         <selenium.version>4.18.1</selenium.version>
         <webdrivermanager.version>5.8.0</webdrivermanager.version>
     </properties>
@@ -37,30 +36,27 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- JSP -->
+        <!-- Thymeleaf (reemplaza JSP/JSTL) -->
         <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-jasper</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
+
+        <!--
+            Thymeleaf + Spring Security:
+            Habilita sec:authorize, sec:authentication en plantillas.
+            Equivalente a spring-security-taglibs de JSP.
+            U9 §5.3: sec:authorize="hasRole('ADMIN')" en plantillas.
+        -->
         <dependency>
-            <groupId>jakarta.servlet.jsp.jstl</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.web</groupId>
-            <artifactId>jakarta.servlet.jsp.jstl</artifactId>
+            <groupId>org.thymeleaf.extras</groupId>
+            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
         </dependency>
 
         <!-- Spring Security 6 (U9) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
-        <!-- Spring Security JSP Taglibs — sec:authorize en header.jsp -->
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-taglibs</artifactId>
         </dependency>
 
         <!-- Spring Data JPA -->
@@ -111,9 +107,14 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- ── Testing (U10) ──────────────────────────────────────────── -->
+        <!-- Swagger / OpenAPI (U11 §7.1) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.3.0</version>
+        </dependency>
 
-        <!-- Spring Boot Test: JUnit 5 + Mockito + AssertJ (U10 §2.1) -->
+        <!-- ── Testing (U10) ──────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -124,42 +125,17 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- Selenium WebDriver (U10 §5.1) — pruebas E2E de interfaz -->
         <dependency>
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
             <version>${selenium.version}</version>
             <scope>test</scope>
         </dependency>
-
-        <!-- WebDriverManager: descarga automáticamente el chromedriver correcto (U10 §5.1) -->
         <dependency>
             <groupId>io.github.bonigarcia</groupId>
             <artifactId>webdrivermanager</artifactId>
             <version>${webdrivermanager.version}</version>
             <scope>test</scope>
-        </dependency>
-
-
-        <!-- ── Swagger / OpenAPI (U11 §7.1) ─────────────────────────────── -->
-        <!-- springdoc-openapi genera la UI en /swagger-ui.html              -->
-        <!-- y el JSON spec en /api-docs automáticamente desde el código.    -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.3.0</version>
-        </dependency>
-
-        <!--
-            springdoc-openapi — Swagger UI + OpenAPI 3 (U11 §7.1)
-            Genera documentación automática a partir del código y anotaciones.
-            Acceso: http://localhost:8080/swagger-ui.html
-        -->
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.3.0</version>
         </dependency>
 
         <!-- WAR deployment -->
@@ -185,67 +161,28 @@
                 </configuration>
             </plugin>
 
-            <!--
-                JaCoCo: cobertura de código (U10 §7).
-                Umbrales actualizados según recomendaciones de la guía U10 §7.2:
-                  LINE     ≥ 70 % (antes 50 %)
-                  BRANCH   ≥ 60 % (nuevo)
-                  METHOD   ≥ 80 % (nuevo)
-
-                mvn clean test           → ejecuta tests + genera reporte
-                mvn jacoco:check         → verifica umbrales (falla si no se cumplen)
-                Reporte: target/site/jacoco/index.html
-            -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
                 <executions>
-                    <!-- 1. Instrumenta el bytecode antes de ejecutar tests -->
+                    <execution><id>prepare-agent</id><goals><goal>prepare-agent</goal></goals></execution>
                     <execution>
-                        <id>prepare-agent</id>
-                        <goals><goal>prepare-agent</goal></goals>
+                        <id>report</id><phase>test</phase><goals><goal>report</goal></goals>
                     </execution>
-                    <!-- 2. Genera el reporte HTML después de ejecutar tests (U10 §7.4) -->
                     <execution>
-                        <id>report</id>
-                        <phase>test</phase>
-                        <goals><goal>report</goal></goals>
-                    </execution>
-                    <!-- 3. Verifica umbrales — falla el build si no se alcanzan (U10 §7.2) -->
-                    <execution>
-                        <id>check</id>
-                        <goals><goal>check</goal></goals>
+                        <id>check</id><goals><goal>check</goal></goals>
                         <configuration>
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
                                     <limits>
-                                        <!-- LINE ≥ 70 % (U10 §7.2) -->
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.70</minimum>
-                                        </limit>
-                                        <!-- BRANCH ≥ 60 % — cubre if/else y switch (U10 §7.2) -->
-                                        <limit>
-                                            <counter>BRANCH</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.60</minimum>
-                                        </limit>
-                                        <!-- METHOD ≥ 80 % — cada método debe invocarse al menos una vez -->
-                                        <limit>
-                                            <counter>METHOD</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.80</minimum>
-                                        </limit>
+                                        <limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.70</minimum></limit>
+                                        <limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>0.60</minimum></limit>
+                                        <limit><counter>METHOD</counter><value>COVEREDRATIO</value><minimum>0.80</minimum></limit>
                                     </limits>
                                 </rule>
                             </rules>
-                            <!--
-                                Exclusiones (U10 §7.3): clases sin lógica de negocio.
-                                No excluir servicios ni repositorios — son el código a cubrir.
-                            -->
                             <excludes>
                                 <exclude>**/*Application.class</exclude>
                                 <exclude>**/config/**/*.class</exclude>
@@ -259,19 +196,11 @@
                 </executions>
             </plugin>
 
-            <!--
-                Surefire: excluir tests E2E de Selenium (@Tag("e2e")) en ejecución normal.
-                Para ejecutar solo los E2E: mvn test -Dgroups=e2e
-                Para excluirlos:           mvn test -DexcludedGroups=e2e   (defecto)
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <excludedGroups>e2e</excludedGroups>
-                </configuration>
+                <configuration><excludedGroups>e2e</excludedGroups></configuration>
             </plugin>
         </plugins>
     </build>
-
 </project>

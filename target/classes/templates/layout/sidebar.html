@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<!--
+  Fragmento sidebar + apertura de main-content.
+
+  Uso: <th:block th:replace="~{layout/sidebar :: sidebar('dashboard')}"></th:block>
+
+  sec:authorize (U9 §5.3): muestra el enlace de Admin solo si el usuario tiene ROLE_ADMIN.
+  Esto es equivalente al antiguo <sec:authorize access="hasRole('ADMIN')"> de los JSPs.
+-->
+<aside th:fragment="sidebar(pageId)" class="sidebar">
+    <a class="logo" href="/dashboard">Au<span>reus</span></a>
+
+    <div class="nav-section">Principal</div>
+    <a class="nav-link" th:classappend="${pageId} == 'dashboard' ? ' active' : ''" href="/dashboard">
+        <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+    <a class="nav-link" th:classappend="${pageId} == 'cuentas' ? ' active' : ''" href="/cuentas">
+        <i class="bi bi-wallet2"></i> Cuentas
+    </a>
+    <a class="nav-link" th:classappend="${pageId} == 'transacciones' ? ' active' : ''" href="/transacciones">
+        <i class="bi bi-arrow-down-up"></i> Transacciones
+    </a>
+    <a class="nav-link" th:classappend="${pageId} == 'presupuestos' ? ' active' : ''" href="/presupuestos">
+        <i class="bi bi-bullseye"></i> Presupuesto
+    </a>
+    <a class="nav-link" th:classappend="${pageId} == 'metas' ? ' active' : ''" href="/metas">
+        <i class="bi bi-trophy"></i> Metas de ahorro
+    </a>
+
+    <div class="nav-section">Análisis</div>
+    <a class="nav-link" th:classappend="${pageId} == 'reportes' ? ' active' : ''" href="/reportes">
+        <i class="bi bi-bar-chart-line"></i> Reportes
+    </a>
+
+    <!-- sec:authorize: visible SOLO para ROLE_ADMIN (U9 §5.3) -->
+    <div sec:authorize="hasRole('ADMIN')">
+        <div class="nav-section">Admin</div>
+        <a class="nav-link" th:classappend="${pageId} == 'admin' ? ' active' : ''" href="/admin">
+            <i class="bi bi-shield-lock"></i> Panel Admin
+        </a>
+    </div>
+
+    <div class="user-card">
+        <!-- Avatar con inicial del email — sec:authentication obtiene el usuario autenticado -->
+        <a href="/perfil" class="d-flex align-items-center gap-2 mb-2 text-decoration-none" style="color:inherit">
+            <div class="user-avatar"
+                 th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">U</div>
+            <div class="flex-grow-1 text-truncate">
+                <div class="text-white fw-500" style="font-size:.8rem" sec:authentication="name">usuario</div>
+                <div style="font-size:.7rem;opacity:.4;color:#C8F135">Ver perfil →</div>
+            </div>
+        </a>
+
+        <!--
+          th:action incluye automáticamente el token CSRF como campo hidden.
+          Equivalente al <input name="${_csrf.parameterName}" value="${_csrf.token}"> de JSP.
+          (U9 §6.1 — CSRF Token Sincronizador)
+        -->
+        <form th:action="@{/auth/logout}" method="post" class="m-0">
+            <button type="submit" class="btn btn-logout w-100">
+                <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+            </button>
+        </form>
+    </div>
+</aside>

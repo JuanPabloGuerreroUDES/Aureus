@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout/head :: head('Dashboard')}"></head>
+<body>
+<aside th:replace="~{layout/sidebar :: sidebar('dashboard')}"></aside>
+<div class="main-content">
+
+    <!-- Alertas flash -->
+    <div th:if="${successMsg}" class="alert alert-success alert-dismissible fade show mb-3">
+        <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mb-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h3 class="fw-bold mb-0">Buenos días, <span th:text="${usuario.name}">Usuario</span> 👋</h3>
+            <p class="text-muted mb-0" style="font-size:.85rem">Resumen consolidado de todas tus cuentas</p>
+        </div>
+        <button class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaQuick"
+                style="background:#0D0F14;color:#C8F135;font-weight:600;border-radius:8px;padding:.5rem 1rem">
+            <i class="bi bi-plus-lg"></i> Agregar
+        </button>
+    </div>
+
+    <!-- Balance total -->
+    <div class="card border-0 mb-4" style="background:#0D0F14;border-radius:18px;padding:2rem 2.2rem">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.45);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem">Balance total acumulado</div>
+                <div style="font-size:2.6rem;font-weight:800;color:#C8F135;line-height:1"
+                     th:text="|$${#numbers.formatInteger(resumen != null ? resumen.balanceTotal : 0, 1, 'COMMA')}|">$0</div>
+                <div style="font-size:.78rem;margin-top:.5rem;color:rgba(255,255,255,.35)">Todos los ingresos menos todos los gastos desde el inicio</div>
+            </div>
+            <div class="d-flex gap-4 flex-wrap">
+                <div>
+                    <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase">Total ingresos</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#4ECDC4"
+                         th:text="|+$${#numbers.formatInteger(resumen != null ? resumen.totalIngresosHistorico : 0, 1, 'COMMA')}|">+$0</div>
+                </div>
+                <div>
+                    <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase">Total gastos</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#F25C3A"
+                         th:text="|-$${#numbers.formatInteger(resumen != null ? resumen.totalGastosHistorico : 0, 1, 'COMMA')}|">-$0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs del mes -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:3px;height:16px;background:#C8F135;border-radius:2px"></div>
+        <span class="fw-bold" style="font-size:.82rem;color:#6E7080;text-transform:uppercase;letter-spacing:.06em">
+            Este mes · <span th:text="${resumen != null ? resumen.periodoLabel : ''}"></span>
+        </span>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="kpi-card teal">
+                <div class="kpi-label">Ingresos del mes</div>
+                <div class="kpi-value" th:text="|+$${#numbers.formatInteger(resumen != null ? resumen.totalIngresos : 0, 1, 'COMMA')}|">+$0</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card" style="border-color:#F8C4B8">
+                <div class="kpi-label">Gastos del mes</div>
+                <div class="kpi-value" style="color:#F25C3A"
+                     th:text="|-$${#numbers.formatInteger(resumen != null ? resumen.totalGastos : 0, 1, 'COMMA')}|">-$0</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="kpi-card lime">
+                <div class="kpi-label">Balance del mes</div>
+                <div class="kpi-value"
+                     th:style="${(resumen != null ? resumen.balanceNeto : 0) >= 0 ? 'color:#0D0F14' : 'color:#F25C3A'}"
+                     th:text="|${resumen != null ? (resumen.balanceNeto >= 0 ? '+$' : '-$') : '+$'}${#numbers.formatInteger(resumen != null ? (resumen.balanceNeto < 0 ? -resumen.balanceNeto : resumen.balanceNeto) : 0, 1, 'COMMA')}|">$0</div>
+                <div style="font-size:.72rem;color:#555;margin-top:.25rem">
+                    Tasa de ahorro: <strong th:text="|${#numbers.formatDecimal(resumen != null ? resumen.tasaAhorro : 0, 1, 'POINT', 1, 'COMMA')}%|">0%</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimas transacciones + Metas -->
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card border-0 shadow-sm" style="border-radius:12px">
+                <div class="card-body p-0">
+                    <div class="d-flex justify-content-between align-items-center p-3 pb-0">
+                        <h6 class="fw-bold mb-0">Últimas transacciones</h6>
+                        <a href="/transacciones" style="font-size:.8rem;color:#1A9E8C;text-decoration:none">Ver todas →</a>
+                    </div>
+                    <table class="table table-aureus table-hover mb-0">
+                        <thead><tr>
+                            <th class="ps-3">Descripción</th><th>Categoría</th><th class="text-end pe-3">Monto</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(ultimasTransacciones)}">
+                                <td colspan="3" class="text-center text-muted py-4" style="font-size:.85rem">
+                                    <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                    Sin transacciones aún.
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalNuevaQuick" style="color:#1A9E8C">Agrega la primera →</a>
+                                </td>
+                            </tr>
+                            <tr th:each="t : ${ultimasTransacciones}">
+                                <td class="ps-3">
+                                    <div class="fw-500" style="font-size:.875rem" th:text="${not #strings.isEmpty(t.description) ? t.description : t.type}">—</div>
+                                    <div style="font-size:.72rem;color:#6E7080" th:text="${t.date}"></div>
+                                </td>
+                                <td>
+                                    <span th:class="${t.type == 'INGRESO' ? 'badge badge-income' : 'badge badge-expense'}"
+                                          style="font-size:.72rem;padding:.3rem .7rem;border-radius:100px"
+                                          th:text="${t.category != null ? t.category.name : t.type}">—</span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <span th:class="${t.type == 'INGRESO' ? 'text-success fw-500' : 'text-danger fw-500'}"
+                                          th:text="${(t.type == 'INGRESO' ? '+' : '-') + '$' + #numbers.formatInteger(t.amount, 1, 'COMMA')}">$0</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm" style="border-radius:12px">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-bold mb-0">Metas activas</h6>
+                        <a href="/metas" style="font-size:.8rem;color:#1A9E8C;text-decoration:none">Ver todas →</a>
+                    </div>
+                    <div th:if="${#lists.isEmpty(metas)}" class="text-center text-muted py-4" style="font-size:.85rem">
+                        <i class="bi bi-trophy fs-4 d-block mb-2"></i>
+                        Sin metas creadas aún. <a href="/metas" style="color:#1A9E8C">Crea tu primera meta →</a>
+                    </div>
+                    <th:block th:each="meta, iter : ${metas}" th:if="${iter.index < 3}">
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <div class="fw-500" style="font-size:.875rem" th:text="${meta.goalName}"></div>
+                                    <div style="font-size:.72rem;color:#6E7080" th:text="|Meta: ${meta.deadline}|"></div>
+                                </div>
+                                <div class="fw-bold" style="font-size:1.1rem"
+                                     th:text="|${#numbers.formatDecimal(meta.calculateProgress(), 1, 'POINT', 0, 'COMMA')}%|">0%</div>
+                            </div>
+                            <div class="progress" th:class="${meta.calculateProgress() >= 80 ? 'progress progress-ok' : 'progress progress-warn'}"
+                                 style="height:6px;border-radius:100px">
+                                <div class="progress-bar" th:style="|width: ${meta.calculateProgress() > 100 ? 100 : meta.calculateProgress()}%|"></div>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1" style="font-size:.72rem;color:#6E7080">
+                                <span th:text="|$${#numbers.formatInteger(meta.currentAmount, 1, 'COMMA')} ahorrado|"></span>
+                                <span th:text="|Objetivo: $${#numbers.formatInteger(meta.targetAmount, 1, 'COMMA')}|"></span>
+                            </div>
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal transacción rápida -->
+    <div class="modal fade" id="modalNuevaQuick" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content" style="border-radius:16px;border:none">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Registrar transacción</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form th:action="@{/transacciones/nueva}" method="post">
+                    <div class="mb-3">
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" value="GASTO" checked/>
+                                <label class="form-check-label"><i class="bi bi-arrow-up-right text-danger me-1"></i>Gasto</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tipo" value="INGRESO"/>
+                                <label class="form-check-label"><i class="bi bi-arrow-down-left text-success me-1"></i>Ingreso</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Monto ($)</label>
+                            <input type="number" name="amount" class="form-control form-control-sm" step="0.01" min="0.01" required placeholder="0.00"/>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size:.82rem">Fecha</label>
+                            <input type="date" name="date" class="form-control form-control-sm" required/>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem">Descripción</label>
+                        <input type="text" name="description" class="form-control form-control-sm" placeholder="Ej. Supermercado" maxlength="255"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.82rem">Cuenta</label>
+                        <select name="accountId" class="form-select form-select-sm" required>
+                            <option value="" disabled="disabled" selected="selected">— Seleccionar —</option>
+                            <option th:each="cuenta : ${cuentas}" th:value="${cuenta.id}" th:text="${cuenta.name}"></option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn w-100 fw-bold" style="background:#0D0F14;color:#C8F135;border-radius:8px">
+                        <i class="bi bi-check-lg me-1"></i>Registrar
+                    </button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+</div>
+</body>
+</html>

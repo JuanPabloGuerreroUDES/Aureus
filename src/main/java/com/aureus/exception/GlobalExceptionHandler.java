@@ -1,13 +1,15 @@
-package com.aureus.controller.advice;
+package com.aureus.exception;
 
 import com.aureus.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Manejador global de excepciones (U11 §5 — @ControllerAdvice).
@@ -18,10 +20,21 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  *  - Logging estructurado: WARN para 4xx (cliente), ERROR para 5xx (servidor).
  *  - Nunca expone stack traces al usuario (A05 OWASP - Security Misconfiguration).
  *  - Captura AureusException como base de negocio (abierto a extensión — OCP).
+ *  - CORREGIDO: NoResourceFoundException (favicon.ico, etc.) maneja 404 silencioso.
  */
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * Maneja recursos estáticos inexistentes (favicon.ico, etc.).
+     * Devuelve 404 sin log ni vista de error para evitar falsos positivos.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResource(NoResourceFoundException ex) {
+        // Silencioso — no loguear como error: es una petición 404 normal
+        return ResponseEntity.notFound().build();
+    }
 
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)

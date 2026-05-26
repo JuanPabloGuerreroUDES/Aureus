@@ -2,7 +2,6 @@ package com.aureus.config;
 
 import com.aureus.security.AureusUserDetailsService;
 import com.aureus.security.JwtAuthFilter;
-import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -138,13 +137,6 @@ public class SecurityConfig {
         http
             // ── Autorización por URL (U9 §5.1) ───────────────────────────
             .authorizeHttpRequests(auth -> auth
-                // Forwards internos del servidor (render de JSPs) — NO interceptar
-                .dispatcherTypeMatchers(
-                    DispatcherType.FORWARD,
-                    DispatcherType.INCLUDE,
-                    DispatcherType.ERROR
-                ).permitAll()
-
                 // Rutas públicas (U9 §3.3)
                 .requestMatchers(
                     "/", "/auth/**",
@@ -224,10 +216,8 @@ public class SecurityConfig {
 
             // ── CSRF habilitado por defecto (U9 §6.1) ────────────────────
             // Spring Security incluye protección CSRF automáticamente.
-            // Los formularios JSP deben incluir manualmente:
-            // <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
-            // O usar el taglib de Spring:
-            // <form:form> que incluye el token automáticamente.
+            // Thymeleaf incluye el token _csrf en todos los formularios con th:action
+            // automáticamente — no es necesario añadirlo manualmente (U9 §6.1).
 
             .authenticationProvider(authenticationProvider());
 
