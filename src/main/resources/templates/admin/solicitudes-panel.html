@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="es">
+<head th:replace="~{layout/head :: head('Panel de Solicitudes')}"></head>
+<body>
+<aside th:replace="~{layout/sidebar :: sidebar('admin')}"></aside>
+<div class="main-content">
+
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h3 class="fw-bold mb-0">Panel de Solicitudes</h3>
+            <p class="text-muted mb-0" style="font-size:.85rem">
+                Gestión de todas las solicitudes del sistema en tiempo real.
+            </p>
+        </div>
+    </div>
+
+    <!-- ── KPIs ── -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="border-color:#C8F135">
+                <div class="kpi-label">Total</div>
+                <div class="kpi-value" th:text="${kpis['total']}">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="border-color:#FFC107">
+                <div class="kpi-label">Pendientes</div>
+                <div class="kpi-value" style="color:#FFC107" th:text="${kpis['pendientes']}">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card teal">
+                <div class="kpi-label">Aprobadas</div>
+                <div class="kpi-value" th:text="${kpis['aprobadas']}">0</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="kpi-card" style="border-color:#F25C3A">
+                <div class="kpi-label">Rechazadas</div>
+                <div class="kpi-value" style="color:#F25C3A" th:text="${kpis['rechazadas']}">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Tabla de solicitudes ── -->
+    <div class="card border-0 shadow-sm" style="border-radius:12px">
+        <div class="card-body p-0">
+            <div class="p-3 pb-0">
+                <h6 class="fw-bold mb-0">Todas las solicitudes</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-aureus table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">#</th>
+                            <th>Solicitante</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Fecha creación</th>
+                            <th>Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(solicitudes)}">
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-4 d-block mb-2"></i>
+                                No hay solicitudes registradas.
+                            </td>
+                        </tr>
+                        <tr th:each="s : ${solicitudes}"
+                            th:classappend="${s.estado == 'PENDIENTE'  ? 'table-warning' :
+                                             s.estado == 'APROBADA'   ? 'table-success' :
+                                                                         'table-danger'}">
+                            <td class="ps-3 text-muted" style="font-size:.8rem" th:text="${s.id}">1</td>
+                            <td>
+                                <div class="fw-500" style="font-size:.875rem" th:text="${s.solicitanteNombre}">—</div>
+                                <div style="font-size:.72rem;color:#6E7080" th:text="${s.solicitanteEmail}">—</div>
+                            </td>
+                            <td>
+                                <!-- Diferenciación visual por tipo -->
+                                <span th:classappend="${s.tipo == 'SOPORTE'     ? 'badge bg-primary' :
+                                                        s.tipo == 'ACCESO'      ? 'badge bg-info text-dark' :
+                                                                                   'badge bg-secondary'}"
+                                      th:text="${s.tipo}"
+                                      style="font-size:.72rem;border-radius:100px;padding:.3rem .7rem">—</span>
+                            </td>
+                            <td>
+                                <!-- Diferenciación visual por estado -->
+                                <span th:if="${s.estado == 'PENDIENTE'}"
+                                      class="badge"
+                                      style="background:#FFC107;color:#000;font-size:.72rem;border-radius:100px;padding:.3rem .7rem">
+                                    ⏳ Pendiente
+                                </span>
+                                <span th:if="${s.estado == 'APROBADA'}"
+                                      class="badge"
+                                      style="background:#1A9E8C;color:#fff;font-size:.72rem;border-radius:100px;padding:.3rem .7rem">
+                                    ✅ Aprobada
+                                </span>
+                                <span th:if="${s.estado == 'RECHAZADA'}"
+                                      class="badge"
+                                      style="background:#F25C3A;color:#fff;font-size:.72rem;border-radius:100px;padding:.3rem .7rem">
+                                    ❌ Rechazada
+                                </span>
+                            </td>
+                            <td style="font-size:.8rem"
+                                th:text="${#temporals.format(s.fechaCreacion, 'dd/MM/yyyy HH:mm')}">—</td>
+                            <td style="font-size:.8rem;max-width:200px;overflow:hidden;text-overflow:ellipsis"
+                                th:text="${s.observacion ?: '—'}">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+</div>
+</body>
+</html>
